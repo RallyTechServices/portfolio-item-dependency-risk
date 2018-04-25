@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>CATS-
+        Feature Dependency Risk-
+            0.0.1
+    </title>
+    <!--  (c) 2017 CA Technologies.  All Rights Reserved. -->
+    <!--  Build Date: Wed Apr 25 2018 21:34:11 GMT+0000 (UTC) -->
+
+    <script type="text/javascript">
+        var APP_BUILD_DATE = "Wed Apr 25 2018 21:34:11 GMT+0000 (UTC)";
+        var ARTIFACT = "";
+        var BUILDER = "ec2-user";
+        var CHECKSUM = "2564683319";
+    </script>
+
+    <script type="text/javascript" src="https://us1.rallydev.com/apps/2.1/sdk-debug.js"></script>
+    <!-- our highcharts (needed so that we can add patterns)
+    <script type="text/javascript" src="/apps/2.1/lib/analytics/analytics-all.js"></script>
+    -->
+
+
+    <script type="text/javascript">
+        Rally.onReady(function() {
+             
+/* global Ext */
+Ext.define('Constants', function(Constants) {
+   return {
+       statics: {
+           PORTFOLIO_ITEM_FETCH_FIELDS: ['Predecessors', 'Successors']
+       }
+   } 
+});
+/* global Ext _ Rally */
+Ext.define('MetricsManager', function(MetricsManager) {
+    return {
+        statics: {
+            addMetrics: addMetrics,
+            STATUS_LABEL_ORDER: [{
+                    label: 'Late',
+                    hex: '#F66349',
+                    count: 0
+                },
+                {
+                    label: 'At Risk',
+                    hex: '#FAD200',
+                    count: 0
+                },
+                {
+                    label: 'Not Started',
+                    hex: '#E0E0E0',
+                    count: 0
+                },
+                {
+                    label: 'On Track',
+                    hex: '#8DC63F',
+                    count: 0
+                },
+                {
+                    label: 'Complete',
+                    hex: '#D1D1D1',
+                    count: 0
+                }
+            ]
+        }
+    }
+
+    function addMetrics(records) {
+        _.forEach(records, function(record) {
+            var predecessorsRef = record.get('Predecessors');
+            var successorsRef = record.get('Successors');
+            if (predecessorsRef.Count > 0) {
+                record
+                    .getCollection('Predecessors')
+                    .load()
+                    .then(function(predecessors) {
+                        record.set('PredecessorCount', predecessors.length);
+                        var storyCountColors = {};
+                        var planEstimateColors = {};
+                        _.forEach(predecessors, function(item) {
+                            var color;
+                            color = Rally.util.HealthColorCalculator.calculateHealthColorForPortfolioItemData(item, 'PercentDoneByStoryCount');
+                            var colorKey = color.label;
+                            if (!storyCountColors[color.label]) {
+                                color.count = 1;
+                                storyCountColors[color.label] = color;
+                            }
+                            else {
+                                storyCountColors[color.label].count += 1;
+                            }
+
+                            Rally.util.HealthColorCalculator.calculateHealthColorForPortfolioItemData(item, 'PercentDoneByStoryPlanEstimate');
+                            color = Rally.util.HealthColorCalculator.calculateHealthColorForPortfolioItemData(item, 'PercentDoneByStoryCount');
+                            colorKey = color.label;
+                            if (!planEstimateColors[color.label]) {
+                                color.count = 1;
+                                planEstimateColors[color.label] = color;
+                            }
+                            else {
+                                planEstimateColors[color.label].count += 1;
+                            }
+                        });
+                        splitColors(record, storyCountColors, 'Predecessors', 'StoryCount');
+                        splitColors(record, planEstimateColors, 'Predecessors', 'PlanEstimate');
+                    });
+            }
+
+            if (successorsRef.Count > 0) {
+                record
+                    .getCollection('Successors')
+                    .load()
+                    .then(function(successors) {
+                        record.set('SuccessorCount', successors.length);
+                        var storyCountColors = {};
+                        var planEstimateColors = {};
+                        _.forEach(successors, function(item) {
+                            var color;
+                            color = Rally.util.HealthColorCalculator.calculateHealthColorForPortfolioItemData(item, 'PercentDoneByStoryCount');
+                            var colorKey = color.label;
+                            if (!storyCountColors[colorKey]) {
+                                color.count = 1;
+                                storyCountColors[colorKey] = color;
+                            }
+                            else {
+                                storyCountColors[colorKey].count += 1;
+                            }
+
+                            Rally.util.HealthColorCalculator.calculateHealthColorForPortfolioItemData(item, 'PercentDoneByStoryPlanEstimate');
+                            color = Rally.util.HealthColorCalculator.calculateHealthColorForPortfolioItemData(item, 'PercentDoneByStoryCount');
+                            colorKey = color.label;
+                            if (!planEstimateColors[colorKey]) {
+                                color.count = 1;
+                                planEstimateColors[colorKey] = color
+                            }
+                            else {
+                                planEstimateColors[colorKey].count += 1;
+                            }
+                        });
+                        splitColors(record, storyCountColors, 'Successors', 'StoryCount');
+                        splitColors(record, planEstimateColors, 'Successors', 'PlanEstimate');
+                    });
+            }
+        });
+    }
+
+    function splitColors(record, colors, relation, metric) {
+        var sortedColors = [];
+        _.forEach(MetricsManager.STATUS_LABEL_ORDER, function(statusLabel) {
+            sortedColors.push(colors[statusLabel.label] ? colors[statusLabel.label] : statusLabel);
+        });
+        record.set(relation + metric + 'Colors', sortedColors);
+        record.set(relation + metric + 'ColorSortKey', _.pluck(sortedColors, 'count').join('+'));
+    }
+});
+
+/* global Ext MetricsManager Constants */
+Ext.define("CArABU.app.TSApp", {
+    extend: 'Rally.app.App',
+    componentCls: 'app',
+    defaults: { margin: 10 },
+    layout: {
+        type: 'vbox',
+        align: 'stretch'
+    },
+    integrationHeaders: {
+        name: "CArABU.app.TSApp"
+    },
+
+    launch: function() {
+        var modelNames = ['portfolioitem/feature'];
+        var context = this.getContext();
+
+        this.add({
+            xtype: 'rallygrid',
+            storeConfig: {
+                model: 'portfolioitem/feature',
+                autoLoad: true,
+                listeners: {
+                    scope: this,
+                    load: function(store, records) {
+                        MetricsManager.addMetrics(records);
+                    }
+                },
+                fetch: Constants.PORTFOLIO_ITEM_FETCH_FIELDS
+            },
+            columnCfgs: [
+                'Name',
+                {
+                    xtype: 'templatecolumn',
+                    text: 'Predecessors',
+                    tpl: '{PredecessorCount}'
+                },
+                {
+                    xtype: 'templatecolumn',
+                    text: 'Successors',
+                    tpl: '{SuccessorCount}'
+                },
+                {
+                    xtype: 'templatecolumn',
+                    //dataIndex: 'PredecessorsStoryCountColorSortKey',
+                    text: 'PredecessorsStoryCountColors',
+                    tpl: '<span><tpl for="PredecessorsStoryCountColors"><span class="{[ values.label.toLowerCase().replace(" ","-") ]}">{count}</span></tpl></span>',
+                },
+                {
+                    xtype: 'templatecolumn',
+                    //dataIndex: 'PredecessorsPlanEstimateColorSortKey',
+                    text: 'PredecessorsPlanEstimateColors',
+                    tpl: '<span><tpl for="PredecessorsPlanEstimateColors"><span class="{[ values.label.toLowerCase().replace(" ","-") ]}">{count}</span></tpl></span>',
+                },
+                {
+                    xtype: 'templatecolumn',
+                    //dataIndex: 'SuccessorsStoryCountColorSortKey',
+                    text: 'SuccessorsStoryCountColors',
+                    tpl: '<span><tpl for="SuccessorsStoryCountColors"><span class="{[ values.label.toLowerCase().replace(" ","-") ]}">{count}</span></tpl></span>',
+                },
+                {
+                    xtype: 'templatecolumn',
+                    //dataIndex: 'SuccessorsPlanEstimateColorSortKey',
+                    text: 'SuccessorsPlanEstimateColors',
+                    tpl: '<span><tpl for="SuccessorsPlanEstimateColors"><span class="{[ values.label.toLowerCase().replace(" ","-") ]}">{count}</span></tpl></span>',
+                }
+            ]
+        });
+        /*
+        Ext.create('Rally.data.wsapi.TreeStoreBuilder').build({
+            models: modelNames,
+            autoLoad: false,
+            enableHierarchy: true,
+            listeners: {
+                scope: this,
+                load: function(store, node, records) {
+                    MetricsManager.addMetrics(records);
+                }
+            },
+            fetch: Constants.PORTFOLIO_ITEM_FETCH_FIELDS
+        }).then({
+            success: function(store) {
+                this.add({
+                    xtype: 'rallygrid',
+                    context: this.getContext(),
+                    modelNames: modelNames,
+                    toggleState: 'grid',
+                    //stateful: false,
+                    plugins: [{
+                            ptype: 'rallygridboardinlinefiltercontrol',
+                            inlineFilterButtonConfig: {
+                                stateful: true,
+                                stateId: context.getScopedStateId('feature-filters'),
+                                modelNames: modelNames,
+                                inlineFilterPanelConfig: {
+                                    quickFilterPanelConfig: {
+                                        defaultFields: [
+                                            'ArtifactSearch',
+                                            'Owner',
+                                            'State'
+                                        ]
+                                    }
+                                }
+                            }
+                        },
+                        {
+                            ptype: 'rallygridboardfieldpicker',
+                            headerPosition: 'left',
+                            modelNames: modelNames,
+                            stateful: false,
+                            stateId: context.getScopedStateId('feature-columns')
+                        }
+                    ],
+                    gridConfig: {
+                        store: store,
+                        //stateful: false,
+                        columnCfgs: [
+                            'Name',
+                            'ScheduleState'
+                            {
+                                xtype: 'templatecolumn',
+                                text: 'Predecessors',
+                                tpl: '{PredecessorCount}'
+                            },
+                            {
+                                xtype: 'templatecolumn',
+                                text: 'Successors',
+                                tpl: '{SuccessorCount}'
+                            }
+                        ]
+                    },
+                    height: this.getHeight()
+                });
+            },
+            scope: this
+        });
+        */
+    }
+});
+
+
+            Rally.launchApp('CArABU.app.TSApp', {
+                name: 'Feature Dependency Risk'
+            });
+        });
+    </script>
+
+    <style type="text/css">
+        
+.app {
+}
+.tsinfolink {
+    position:absolute;
+    right:0px;
+    width: 14px;
+    height: 14px;
+    border-radius: 7px;
+    text-align: center;
+    color: white;
+    background: #C0C0C0;
+    border-style: solid;
+    border-width: 1px;
+    margin-top: 25px;
+    margin-right: 5px;
+    cursor: pointer;
+}
+
+.late {
+    background-color: #F66349;
+}
+
+.at-risk {
+    background-color: #FAD200;
+}
+
+.not-started {
+    background-color: #E0E0E0;
+}
+
+.on-track {
+    background-color: #8DC63F;
+}
+
+.complete {
+    background-color: #D1D1D1;
+}
+    </style>
+
+</head>
+
+<body></body>
+
+</html>
