@@ -15,3 +15,23 @@
     margin-right: 5px;
     cursor: pointer;
 }
+
+.late {
+    background-color: #F66349;
+}
+
+.at-risk {
+    background-color: #FAD200;
+}
+
+.not-started {
+    background-color: #E0E0E0;
+}
+
+.on-track {
+    background-color: #8DC63F;
+}
+
+.complete {
+    background-color: #D1D1D1;
+}

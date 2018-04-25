@@ -3,5 +3,10 @@
     "sdk": "2.1",
     "version": "0.0.1",
     "className": "CArABU.app.TSApp",
-    "artifact": ""
+    "artifact": "",
+    "javascript": [
+        "src/javascript/Constants.js",
+        "src/javascript/MetricsManager.js",
+        "src/javascript/app.js"
+    ]
 }

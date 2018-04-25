@@ -1,3 +1,4 @@
+/* global Ext MetricsManager Constants */
 Ext.define("CArABU.app.TSApp", {
     extend: 'Rally.app.App',
     componentCls: 'app',
@@ -13,24 +14,83 @@ Ext.define("CArABU.app.TSApp", {
     launch: function() {
         var modelNames = ['portfolioitem/feature'];
         var context = this.getContext();
+
+        this.add({
+            xtype: 'rallygrid',
+            storeConfig: {
+                model: 'portfolioitem/feature',
+                autoLoad: true,
+                listeners: {
+                    scope: this,
+                    load: function(store, records) {
+                        MetricsManager.addMetrics(records);
+                    }
+                },
+                fetch: Constants.PORTFOLIO_ITEM_FETCH_FIELDS
+            },
+            columnCfgs: [
+                'Name',
+                {
+                    xtype: 'templatecolumn',
+                    text: 'Predecessors',
+                    tpl: '{PredecessorCount}'
+                },
+                {
+                    xtype: 'templatecolumn',
+                    text: 'Successors',
+                    tpl: '{SuccessorCount}'
+                },
+                {
+                    xtype: 'templatecolumn',
+                    //dataIndex: 'PredecessorsStoryCountColorSortKey',
+                    text: 'PredecessorsStoryCountColors',
+                    tpl: '<span><tpl for="PredecessorsStoryCountColors"><span class="{[ values.label.toLowerCase().replace(" ","-") ]}">{count}</span></tpl></span>',
+                },
+                {
+                    xtype: 'templatecolumn',
+                    //dataIndex: 'PredecessorsPlanEstimateColorSortKey',
+                    text: 'PredecessorsPlanEstimateColors',
+                    tpl: '<span><tpl for="PredecessorsPlanEstimateColors"><span class="{[ values.label.toLowerCase().replace(" ","-") ]}">{count}</span></tpl></span>',
+                },
+                {
+                    xtype: 'templatecolumn',
+                    //dataIndex: 'SuccessorsStoryCountColorSortKey',
+                    text: 'SuccessorsStoryCountColors',
+                    tpl: '<span><tpl for="SuccessorsStoryCountColors"><span class="{[ values.label.toLowerCase().replace(" ","-") ]}">{count}</span></tpl></span>',
+                },
+                {
+                    xtype: 'templatecolumn',
+                    //dataIndex: 'SuccessorsPlanEstimateColorSortKey',
+                    text: 'SuccessorsPlanEstimateColors',
+                    tpl: '<span><tpl for="SuccessorsPlanEstimateColors"><span class="{[ values.label.toLowerCase().replace(" ","-") ]}">{count}</span></tpl></span>',
+                }
+            ]
+        });
+        /*
         Ext.create('Rally.data.wsapi.TreeStoreBuilder').build({
             models: modelNames,
-            autoLoad: true,
-            enableHierarchy: true
+            autoLoad: false,
+            enableHierarchy: true,
+            listeners: {
+                scope: this,
+                load: function(store, node, records) {
+                    MetricsManager.addMetrics(records);
+                }
+            },
+            fetch: Constants.PORTFOLIO_ITEM_FETCH_FIELDS
         }).then({
             success: function(store) {
                 this.add({
-                    xtype: 'rallygridboard',
+                    xtype: 'rallygrid',
                     context: this.getContext(),
                     modelNames: modelNames,
                     toggleState: 'grid',
-                    plugins: [
-                        //'rallygridboardtoggleable'
-                        {
+                    //stateful: false,
+                    plugins: [{
                             ptype: 'rallygridboardinlinefiltercontrol',
                             inlineFilterButtonConfig: {
                                 stateful: true,
-                                stateId: context.getScopedStateId('filters'),
+                                stateId: context.getScopedStateId('feature-filters'),
                                 modelNames: modelNames,
                                 inlineFilterPanelConfig: {
                                     quickFilterPanelConfig: {
@@ -47,28 +107,33 @@ Ext.define("CArABU.app.TSApp", {
                             ptype: 'rallygridboardfieldpicker',
                             headerPosition: 'left',
                             modelNames: modelNames,
-                            stateful: true,
-                            stateId: context.getScopedStateId('columns')
+                            stateful: false,
+                            stateId: context.getScopedStateId('feature-columns')
                         }
                     ],
-                    cardBoardConfig: {
-                        attribute: 'ScheduleState'
-                    },
                     gridConfig: {
                         store: store,
+                        //stateful: false,
                         columnCfgs: [
                             'Name',
-                            'ScheduleState',
-                            'Owner',
-                            'PlanEstimate'
+                            'ScheduleState'
+                            {
+                                xtype: 'templatecolumn',
+                                text: 'Predecessors',
+                                tpl: '{PredecessorCount}'
+                            },
+                            {
+                                xtype: 'templatecolumn',
+                                text: 'Successors',
+                                tpl: '{SuccessorCount}'
+                            }
                         ]
                     },
-                    height: 500, // this.getHeight()
-                    width: 500
+                    height: this.getHeight()
                 });
             },
             scope: this
         });
+        */
     }
-
 });
