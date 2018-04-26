@@ -14,21 +14,6 @@ Ext.define("CArABU.app.TSApp", {
     launch: function() {
         var modelNames = ['portfolioitem/feature'];
         var context = this.getContext();
-        /*
-        this.add({
-            xtype: 'rallygrid',
-            listeners: {
-                scope: this,
-                itemclick: function(grid, record, item, index) {
-                    var popover = Rally.ui.popover.PopoverFactory.bake({
-                        field: 'PredecessorsAndSuccessors',
-                        record: record,
-                        target: item
-                    });
-                }
-            }
-        });
-        */
 
         Ext.create('Rally.data.wsapi.TreeStoreBuilder').build({
             models: modelNames,
@@ -89,18 +74,7 @@ Ext.define("CArABU.app.TSApp", {
                                 });
                             }
                         },
-                        columnCfgs: [
-                            'Name',
-                            'Owner',
-                            'DisplayColor',
-                            'FormattedID',
-                            'Description',
-                            {
-                                tpl: '<div style="text-align:right;">{PredecessorsStoryCountColorSortKey}</div>',
-                                text: 'PredecessorsStoryCountColorSortKey',
-                                xtype: 'templatecolumn'
-                            }
-                        ],
+                        columnCfgs: this.getColumns(),
                         derivedColumns: this.getDerivedColumns()
                     },
                     height: this.getHeight()
@@ -111,6 +85,8 @@ Ext.define("CArABU.app.TSApp", {
     },
 
     getColumns: function() {
+        // TODO (tj) are derived columns needed in getColumns...or perhaps override can detect
+        // a derived column in the normal column list
         return [
             'Name',
         ].concat(this.getDerivedColumns());

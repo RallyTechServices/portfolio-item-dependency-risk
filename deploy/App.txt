@@ -7,13 +7,13 @@
             0.0.1
     </title>
     <!--  (c) 2017 CA Technologies.  All Rights Reserved. -->
-    <!--  Build Date: Thu Apr 26 2018 17:18:31 GMT+0000 (UTC) -->
+    <!--  Build Date: Thu Apr 26 2018 17:21:59 GMT+0000 (UTC) -->
 
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Thu Apr 26 2018 17:18:31 GMT+0000 (UTC)";
+        var APP_BUILD_DATE = "Thu Apr 26 2018 17:21:59 GMT+0000 (UTC)";
         var ARTIFACT = "";
         var BUILDER = "ec2-user";
-        var CHECKSUM = "4910046568";
+        var CHECKSUM = "4645418267";
     </script>
 
     <script type="text/javascript" src="https://us1.rallydev.com/apps/2.1/sdk-debug.js"></script>
@@ -248,21 +248,6 @@ Ext.define("CArABU.app.TSApp", {
     launch: function() {
         var modelNames = ['portfolioitem/feature'];
         var context = this.getContext();
-        /*
-        this.add({
-            xtype: 'rallygrid',
-            listeners: {
-                scope: this,
-                itemclick: function(grid, record, item, index) {
-                    var popover = Rally.ui.popover.PopoverFactory.bake({
-                        field: 'PredecessorsAndSuccessors',
-                        record: record,
-                        target: item
-                    });
-                }
-            }
-        });
-        */
 
         Ext.create('Rally.data.wsapi.TreeStoreBuilder').build({
             models: modelNames,
@@ -323,18 +308,7 @@ Ext.define("CArABU.app.TSApp", {
                                 });
                             }
                         },
-                        columnCfgs: [
-                            'Name',
-                            'Owner',
-                            'DisplayColor',
-                            'FormattedID',
-                            'Description',
-                            {
-                                tpl: '<div style="text-align:right;">{PredecessorsStoryCountColorSortKey}</div>',
-                                text: 'PredecessorsStoryCountColorSortKey',
-                                xtype: 'templatecolumn'
-                            }
-                        ],
+                        columnCfgs: this.getColumns(),
                         derivedColumns: this.getDerivedColumns()
                     },
                     height: this.getHeight()
@@ -345,6 +319,8 @@ Ext.define("CArABU.app.TSApp", {
     },
 
     getColumns: function() {
+        // TODO (tj) are derived columns needed in getColumns...or perhaps override can detect
+        // a derived column in the normal column list
         return [
             'Name',
         ].concat(this.getDerivedColumns());
