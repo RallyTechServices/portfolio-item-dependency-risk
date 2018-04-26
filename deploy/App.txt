@@ -7,13 +7,13 @@
             0.0.1
     </title>
     <!--  (c) 2017 CA Technologies.  All Rights Reserved. -->
-    <!--  Build Date: Wed Apr 25 2018 21:34:11 GMT+0000 (UTC) -->
+    <!--  Build Date: Thu Apr 26 2018 17:18:31 GMT+0000 (UTC) -->
 
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Wed Apr 25 2018 21:34:11 GMT+0000 (UTC)";
+        var APP_BUILD_DATE = "Thu Apr 26 2018 17:18:31 GMT+0000 (UTC)";
         var ARTIFACT = "";
         var BUILDER = "ec2-user";
-        var CHECKSUM = "2564683319";
+        var CHECKSUM = "4910046568";
     </script>
 
     <script type="text/javascript" src="https://us1.rallydev.com/apps/2.1/sdk-debug.js"></script>
@@ -33,6 +33,79 @@ Ext.define('Constants', function(Constants) {
        }
    } 
 });
+/* global Ext Rally _ */
+Ext.override(Rally.data.wsapi.TreeStore, {
+    _decorateModels: function() {
+        var models = this.model;
+
+        if (_.isFunction(models.getArtifactComponentModels)) {
+            models = models.getArtifactComponentModels();
+        }
+
+        Ext.Array.each(models, function(m) {
+            if (m.typePath.indexOf("portfolioitem/") != -1) {
+                //m.addField({ name: 'ToDo', type: 'auto', defaultValue: 0, modelType: m.typePath });
+                // TODO (tj) modelType used anywhere?
+                m.addField({ name: 'PredecessorsStoryCountColorSortKey', type: 'string', defaultValue: '', modelType: m.typePath });
+                m.addField({ name: 'PredecessorsPlanEstimateColorSortKey', type: 'string', defaultValue: '', modelType: m.typePath });
+                m.addField({ name: 'SuccessorsStoryCountColorSortKey', type: 'string', defaultValue: '', modelType: m.typePath });
+                m.addField({ name: 'SuccessorsPlanEstimateColorSortKey', type: 'string', defaultValue: '', modelType: m.typePath });
+            }
+            /*
+            if (m.typePath.indexOf("hierarchicalrequirement") != -1) {
+                m.addField({ name: 'Estimate', type: 'auto', defaultValue: 0, modelType: m.typePath });
+                m.addField({ name: 'TimeSpent', type: 'auto', defaultValue: 0, modelType: m.typePath });
+                m.addField({ name: 'ToDo', type: 'auto', defaultValue: 0, modelType: m.typePath });
+                m.addField({ name: 'AcceptedLeafStoryPlanEstimateTotal', type: 'auto', defaultValue: 0, modelType: m.typePath });
+                m.addField({ name: 'LeafStoryPlanEstimateTotal', type: 'auto', defaultValue: 0, modelType: m.typePath });
+            }
+            */
+        });
+
+        _.each(Ext.Array.from(models), Rally.ui.grid.data.NodeInterface.decorate, Rally.ui.grid.data.NodeInterface);
+    }
+});
+
+Ext.override(Rally.ui.grid.TreeGrid, {
+    _mergeColumnConfigs: function(newColumns, oldColumns) {
+
+        var mergedColumns = _.map(newColumns, function(newColumn) {
+            var oldColumn = _.find(oldColumns, { dataIndex: this._getColumnName(newColumn) });
+            if (oldColumn) {
+                return this._getColumnConfigFromColumn(oldColumn);
+            }
+
+            return newColumn;
+        }, this);
+        mergedColumns = mergedColumns.concat(this.config.derivedColumns);
+        return mergedColumns;
+    },
+    _restoreColumnOrder: function(columnConfigs) {
+
+        var currentColumns = this._getColumnConfigsBasedOnCurrentOrder(columnConfigs);
+        var addedColumns = _.filter(columnConfigs, function(config) {
+            return !_.find(currentColumns, { dataIndex: config.dataIndex }) || Ext.isString(config);
+        });
+
+        return currentColumns.concat(addedColumns);
+    },
+    _applyStatefulColumns: function(columns) {
+        if (this.alwaysShowDefaultColumns) {
+            _.each(this.columnCfgs, function(columnCfg) {
+                if (!_.any(columns, { dataIndex: this._getColumnName(columnCfg) })) {
+                    columns.push(columnCfg);
+                }
+            }, this);
+        }
+        if (this.config && this.config.derivedColumns) {
+            this.columnCfgs = columns.concat(this.config.derivedColumns);
+        }
+        else {
+            this.columnCfgs = columns;
+        }
+    }
+});
+
 /* global Ext _ Rally */
 Ext.define('MetricsManager', function(MetricsManager) {
     return {
@@ -69,6 +142,10 @@ Ext.define('MetricsManager', function(MetricsManager) {
 
     function addMetrics(records) {
         _.forEach(records, function(record) {
+            if (record.get('_type') != 'portfolioitem/feature') {
+                return
+            }
+
             var predecessorsRef = record.get('Predecessors');
             var successorsRef = record.get('Successors');
             if (predecessorsRef.Count > 0) {
@@ -155,7 +232,7 @@ Ext.define('MetricsManager', function(MetricsManager) {
     }
 });
 
-/* global Ext MetricsManager Constants */
+/* global Ext MetricsManager Constants Rally */
 Ext.define("CArABU.app.TSApp", {
     extend: 'Rally.app.App',
     componentCls: 'app',
@@ -171,59 +248,22 @@ Ext.define("CArABU.app.TSApp", {
     launch: function() {
         var modelNames = ['portfolioitem/feature'];
         var context = this.getContext();
-
+        /*
         this.add({
             xtype: 'rallygrid',
-            storeConfig: {
-                model: 'portfolioitem/feature',
-                autoLoad: true,
-                listeners: {
-                    scope: this,
-                    load: function(store, records) {
-                        MetricsManager.addMetrics(records);
-                    }
-                },
-                fetch: Constants.PORTFOLIO_ITEM_FETCH_FIELDS
-            },
-            columnCfgs: [
-                'Name',
-                {
-                    xtype: 'templatecolumn',
-                    text: 'Predecessors',
-                    tpl: '{PredecessorCount}'
-                },
-                {
-                    xtype: 'templatecolumn',
-                    text: 'Successors',
-                    tpl: '{SuccessorCount}'
-                },
-                {
-                    xtype: 'templatecolumn',
-                    //dataIndex: 'PredecessorsStoryCountColorSortKey',
-                    text: 'PredecessorsStoryCountColors',
-                    tpl: '<span><tpl for="PredecessorsStoryCountColors"><span class="{[ values.label.toLowerCase().replace(" ","-") ]}">{count}</span></tpl></span>',
-                },
-                {
-                    xtype: 'templatecolumn',
-                    //dataIndex: 'PredecessorsPlanEstimateColorSortKey',
-                    text: 'PredecessorsPlanEstimateColors',
-                    tpl: '<span><tpl for="PredecessorsPlanEstimateColors"><span class="{[ values.label.toLowerCase().replace(" ","-") ]}">{count}</span></tpl></span>',
-                },
-                {
-                    xtype: 'templatecolumn',
-                    //dataIndex: 'SuccessorsStoryCountColorSortKey',
-                    text: 'SuccessorsStoryCountColors',
-                    tpl: '<span><tpl for="SuccessorsStoryCountColors"><span class="{[ values.label.toLowerCase().replace(" ","-") ]}">{count}</span></tpl></span>',
-                },
-                {
-                    xtype: 'templatecolumn',
-                    //dataIndex: 'SuccessorsPlanEstimateColorSortKey',
-                    text: 'SuccessorsPlanEstimateColors',
-                    tpl: '<span><tpl for="SuccessorsPlanEstimateColors"><span class="{[ values.label.toLowerCase().replace(" ","-") ]}">{count}</span></tpl></span>',
+            listeners: {
+                scope: this,
+                itemclick: function(grid, record, item, index) {
+                    var popover = Rally.ui.popover.PopoverFactory.bake({
+                        field: 'PredecessorsAndSuccessors',
+                        record: record,
+                        target: item
+                    });
                 }
-            ]
+            }
         });
-        /*
+        */
+
         Ext.create('Rally.data.wsapi.TreeStoreBuilder').build({
             models: modelNames,
             autoLoad: false,
@@ -238,11 +278,10 @@ Ext.define("CArABU.app.TSApp", {
         }).then({
             success: function(store) {
                 this.add({
-                    xtype: 'rallygrid',
+                    xtype: 'rallygridboard',
                     context: this.getContext(),
                     modelNames: modelNames,
                     toggleState: 'grid',
-                    //stateful: false,
                     plugins: [{
                             ptype: 'rallygridboardinlinefiltercontrol',
                             inlineFilterButtonConfig: {
@@ -264,34 +303,89 @@ Ext.define("CArABU.app.TSApp", {
                             ptype: 'rallygridboardfieldpicker',
                             headerPosition: 'left',
                             modelNames: modelNames,
-                            stateful: false,
+                            stateful: true,
                             stateId: context.getScopedStateId('feature-columns')
                         }
                     ],
                     gridConfig: {
                         store: store,
-                        //stateful: false,
+                        enabledEditing: false,
+                        shouldShowRowActionsColumn: false,
+                        enableRanking: false,
+                        enableBulkEdit: false,
+                        listeners: {
+                            scope: this,
+                            itemclick: function(grid, record, item, index) {
+                                var popover = Rally.ui.popover.PopoverFactory.bake({
+                                    field: 'PredecessorsAndSuccessors',
+                                    record: record,
+                                    target: item
+                                });
+                            }
+                        },
                         columnCfgs: [
                             'Name',
-                            'ScheduleState'
+                            'Owner',
+                            'DisplayColor',
+                            'FormattedID',
+                            'Description',
                             {
-                                xtype: 'templatecolumn',
-                                text: 'Predecessors',
-                                tpl: '{PredecessorCount}'
-                            },
-                            {
-                                xtype: 'templatecolumn',
-                                text: 'Successors',
-                                tpl: '{SuccessorCount}'
+                                tpl: '<div style="text-align:right;">{PredecessorsStoryCountColorSortKey}</div>',
+                                text: 'PredecessorsStoryCountColorSortKey',
+                                xtype: 'templatecolumn'
                             }
-                        ]
+                        ],
+                        derivedColumns: this.getDerivedColumns()
                     },
                     height: this.getHeight()
                 });
             },
             scope: this
         });
-        */
+    },
+
+    getColumns: function() {
+        return [
+            'Name',
+        ].concat(this.getDerivedColumns());
+    },
+
+    getDerivedColumns: function() {
+        return [{
+                xtype: 'templatecolumn',
+                text: 'Predecessors',
+                tpl: '{PredecessorCount}'
+            },
+            {
+                xtype: 'templatecolumn',
+                text: 'Successors',
+                tpl: '{SuccessorCount}'
+            },
+            {
+                xtype: 'templatecolumn',
+                //dataIndex: 'PredecessorsStoryCountColorSortKey',
+                text: 'Predecessors By Story Count',
+                tpl: '<span><tpl for="PredecessorsStoryCountColors"><span class="{[ values.label.toLowerCase().replace(" ","-") ]}">{count}</span></tpl></span>',
+            },
+            {
+                xtype: 'templatecolumn',
+                //dataIndex: 'PredecessorsPlanEstimateColorSortKey',
+                text: 'Predecessors By Plan Estimate',
+                tpl: '<span><tpl for="PredecessorsPlanEstimateColors"><span class="{[ values.label.toLowerCase().replace(" ","-") ]}">{count}</span></tpl></span>',
+            },
+            {
+                xtype: 'templatecolumn',
+                //dataIndex: 'SuccessorsStoryCountColorSortKey',
+                text: 'Successors By Story Count',
+                tpl: '<span><tpl for="SuccessorsStoryCountColors"><span class="{[ values.label.toLowerCase().replace(" ","-") ]}">{count}</span></tpl></span>',
+            },
+            {
+                xtype: 'templatecolumn',
+                //dataIndex: 'SuccessorsPlanEstimateColorSortKey',
+                text: 'Successors By Plan Estimate',
+                tpl: '<span><tpl for="SuccessorsPlanEstimateColors"><span class="{[ values.label.toLowerCase().replace(" ","-") ]}">{count}</span></tpl></span>',
+            }
+        ];
     }
 });
 

@@ -1,4 +1,4 @@
-/* global Ext MetricsManager Constants */
+/* global Ext MetricsManager Constants Rally */
 Ext.define("CArABU.app.TSApp", {
     extend: 'Rally.app.App',
     componentCls: 'app',
@@ -14,59 +14,22 @@ Ext.define("CArABU.app.TSApp", {
     launch: function() {
         var modelNames = ['portfolioitem/feature'];
         var context = this.getContext();
-
+        /*
         this.add({
             xtype: 'rallygrid',
-            storeConfig: {
-                model: 'portfolioitem/feature',
-                autoLoad: true,
-                listeners: {
-                    scope: this,
-                    load: function(store, records) {
-                        MetricsManager.addMetrics(records);
-                    }
-                },
-                fetch: Constants.PORTFOLIO_ITEM_FETCH_FIELDS
-            },
-            columnCfgs: [
-                'Name',
-                {
-                    xtype: 'templatecolumn',
-                    text: 'Predecessors',
-                    tpl: '{PredecessorCount}'
-                },
-                {
-                    xtype: 'templatecolumn',
-                    text: 'Successors',
-                    tpl: '{SuccessorCount}'
-                },
-                {
-                    xtype: 'templatecolumn',
-                    //dataIndex: 'PredecessorsStoryCountColorSortKey',
-                    text: 'PredecessorsStoryCountColors',
-                    tpl: '<span><tpl for="PredecessorsStoryCountColors"><span class="{[ values.label.toLowerCase().replace(" ","-") ]}">{count}</span></tpl></span>',
-                },
-                {
-                    xtype: 'templatecolumn',
-                    //dataIndex: 'PredecessorsPlanEstimateColorSortKey',
-                    text: 'PredecessorsPlanEstimateColors',
-                    tpl: '<span><tpl for="PredecessorsPlanEstimateColors"><span class="{[ values.label.toLowerCase().replace(" ","-") ]}">{count}</span></tpl></span>',
-                },
-                {
-                    xtype: 'templatecolumn',
-                    //dataIndex: 'SuccessorsStoryCountColorSortKey',
-                    text: 'SuccessorsStoryCountColors',
-                    tpl: '<span><tpl for="SuccessorsStoryCountColors"><span class="{[ values.label.toLowerCase().replace(" ","-") ]}">{count}</span></tpl></span>',
-                },
-                {
-                    xtype: 'templatecolumn',
-                    //dataIndex: 'SuccessorsPlanEstimateColorSortKey',
-                    text: 'SuccessorsPlanEstimateColors',
-                    tpl: '<span><tpl for="SuccessorsPlanEstimateColors"><span class="{[ values.label.toLowerCase().replace(" ","-") ]}">{count}</span></tpl></span>',
+            listeners: {
+                scope: this,
+                itemclick: function(grid, record, item, index) {
+                    var popover = Rally.ui.popover.PopoverFactory.bake({
+                        field: 'PredecessorsAndSuccessors',
+                        record: record,
+                        target: item
+                    });
                 }
-            ]
+            }
         });
-        /*
+        */
+
         Ext.create('Rally.data.wsapi.TreeStoreBuilder').build({
             models: modelNames,
             autoLoad: false,
@@ -81,11 +44,10 @@ Ext.define("CArABU.app.TSApp", {
         }).then({
             success: function(store) {
                 this.add({
-                    xtype: 'rallygrid',
+                    xtype: 'rallygridboard',
                     context: this.getContext(),
                     modelNames: modelNames,
                     toggleState: 'grid',
-                    //stateful: false,
                     plugins: [{
                             ptype: 'rallygridboardinlinefiltercontrol',
                             inlineFilterButtonConfig: {
@@ -107,33 +69,88 @@ Ext.define("CArABU.app.TSApp", {
                             ptype: 'rallygridboardfieldpicker',
                             headerPosition: 'left',
                             modelNames: modelNames,
-                            stateful: false,
+                            stateful: true,
                             stateId: context.getScopedStateId('feature-columns')
                         }
                     ],
                     gridConfig: {
                         store: store,
-                        //stateful: false,
+                        enabledEditing: false,
+                        shouldShowRowActionsColumn: false,
+                        enableRanking: false,
+                        enableBulkEdit: false,
+                        listeners: {
+                            scope: this,
+                            itemclick: function(grid, record, item, index) {
+                                var popover = Rally.ui.popover.PopoverFactory.bake({
+                                    field: 'PredecessorsAndSuccessors',
+                                    record: record,
+                                    target: item
+                                });
+                            }
+                        },
                         columnCfgs: [
                             'Name',
-                            'ScheduleState'
+                            'Owner',
+                            'DisplayColor',
+                            'FormattedID',
+                            'Description',
                             {
-                                xtype: 'templatecolumn',
-                                text: 'Predecessors',
-                                tpl: '{PredecessorCount}'
-                            },
-                            {
-                                xtype: 'templatecolumn',
-                                text: 'Successors',
-                                tpl: '{SuccessorCount}'
+                                tpl: '<div style="text-align:right;">{PredecessorsStoryCountColorSortKey}</div>',
+                                text: 'PredecessorsStoryCountColorSortKey',
+                                xtype: 'templatecolumn'
                             }
-                        ]
+                        ],
+                        derivedColumns: this.getDerivedColumns()
                     },
                     height: this.getHeight()
                 });
             },
             scope: this
         });
-        */
+    },
+
+    getColumns: function() {
+        return [
+            'Name',
+        ].concat(this.getDerivedColumns());
+    },
+
+    getDerivedColumns: function() {
+        return [{
+                xtype: 'templatecolumn',
+                text: 'Predecessors',
+                tpl: '{PredecessorCount}'
+            },
+            {
+                xtype: 'templatecolumn',
+                text: 'Successors',
+                tpl: '{SuccessorCount}'
+            },
+            {
+                xtype: 'templatecolumn',
+                //dataIndex: 'PredecessorsStoryCountColorSortKey',
+                text: 'Predecessors By Story Count',
+                tpl: '<span><tpl for="PredecessorsStoryCountColors"><span class="{[ values.label.toLowerCase().replace(" ","-") ]}">{count}</span></tpl></span>',
+            },
+            {
+                xtype: 'templatecolumn',
+                //dataIndex: 'PredecessorsPlanEstimateColorSortKey',
+                text: 'Predecessors By Plan Estimate',
+                tpl: '<span><tpl for="PredecessorsPlanEstimateColors"><span class="{[ values.label.toLowerCase().replace(" ","-") ]}">{count}</span></tpl></span>',
+            },
+            {
+                xtype: 'templatecolumn',
+                //dataIndex: 'SuccessorsStoryCountColorSortKey',
+                text: 'Successors By Story Count',
+                tpl: '<span><tpl for="SuccessorsStoryCountColors"><span class="{[ values.label.toLowerCase().replace(" ","-") ]}">{count}</span></tpl></span>',
+            },
+            {
+                xtype: 'templatecolumn',
+                //dataIndex: 'SuccessorsPlanEstimateColorSortKey',
+                text: 'Successors By Plan Estimate',
+                tpl: '<span><tpl for="SuccessorsPlanEstimateColors"><span class="{[ values.label.toLowerCase().replace(" ","-") ]}">{count}</span></tpl></span>',
+            }
+        ];
     }
 });

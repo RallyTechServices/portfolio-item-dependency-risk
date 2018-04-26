@@ -34,6 +34,10 @@ Ext.define('MetricsManager', function(MetricsManager) {
 
     function addMetrics(records) {
         _.forEach(records, function(record) {
+            if (record.get('_type') != 'portfolioitem/feature') {
+                return
+            }
+
             var predecessorsRef = record.get('Predecessors');
             var successorsRef = record.get('Successors');
             if (predecessorsRef.Count > 0) {
