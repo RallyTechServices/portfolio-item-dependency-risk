@@ -1,34 +1,8 @@
-/* global Ext _ Rally */
+/* global Ext _ Rally Constants */
 Ext.define('MetricsManager', function(MetricsManager) {
     return {
         statics: {
-            addMetrics: addMetrics,
-            STATUS_LABEL_ORDER: [{
-                    label: 'Late',
-                    hex: '#F66349',
-                    count: 0
-                },
-                {
-                    label: 'At Risk',
-                    hex: '#FAD200',
-                    count: 0
-                },
-                {
-                    label: 'Not Started',
-                    hex: '#E0E0E0',
-                    count: 0
-                },
-                {
-                    label: 'On Track',
-                    hex: '#8DC63F',
-                    count: 0
-                },
-                {
-                    label: 'Complete',
-                    hex: '#D1D1D1',
-                    count: 0
-                }
-            ]
+            addMetrics: addMetrics
         }
     }
 
@@ -115,7 +89,7 @@ Ext.define('MetricsManager', function(MetricsManager) {
 
     function splitColors(record, colors, relation, metric) {
         var sortedColors = [];
-        _.forEach(MetricsManager.STATUS_LABEL_ORDER, function(statusLabel) {
+        _.forEach(Constants.STATUS_LABEL_ORDER, function(statusLabel) {
             sortedColors.push(colors[statusLabel.label] ? colors[statusLabel.label] : statusLabel);
         });
         record.set(relation + metric + 'Colors', sortedColors);

@@ -7,6 +7,9 @@ Ext.define("CArABU.app.TSApp", {
         type: 'vbox',
         align: 'stretch'
     },
+    items: [{
+        xtype: 'tslegend'
+    }],
     integrationHeaders: {
         name: "CArABU.app.TSApp"
     },
@@ -137,7 +140,7 @@ Ext.define("CArABU.app.TSApp", {
                 renderer: function(value, meta, record, row, col, store) {
                     return this.colorsRenderer(record.get('PredecessorsStoryCountColors'), Constants.CLASS.PERCENT_DONE_BY_STORY_COUNT);
                 },
-                sortable: false,
+                sortable: true,
                 tdCls: Constants.CLASS.PREDECESSORS + ' ' + Constants.CLASS.PERCENT_DONE_BY_STORY_COUNT
             },
             {
@@ -148,7 +151,7 @@ Ext.define("CArABU.app.TSApp", {
                 renderer: function(value, meta, record, row, col, store) {
                     return this.colorsRenderer(record.get('PredecessorsPlanEstimateColors'), Constants.CLASS.PERCENT_DONE_BY_STORY_PLAN_ESTIMATE);
                 },
-                sortable: false,
+                sortable: true,
                 tdCls: Constants.CLASS.PREDECESSORS + ' ' + Constants.CLASS.PERCENT_DONE_BY_STORY_PLAN_ESTIMATE
             },
             {
@@ -159,7 +162,7 @@ Ext.define("CArABU.app.TSApp", {
                 renderer: function(value, meta, record, row, col, store) {
                     return this.colorsRenderer(record.get('SuccessorsStoryCountColors'), Constants.CLASS.PERCENT_DONE_BY_STORY_COUNT);
                 },
-                sortable: false,
+                sortable: true,
                 tdCls: Constants.CLASS.SUCCESSORS + ' ' + Constants.CLASS.PERCENT_DONE_BY_STORY_COUNT
             },
             {
@@ -170,7 +173,7 @@ Ext.define("CArABU.app.TSApp", {
                 renderer: function(value, meta, record, row, col, store) {
                     return this.colorsRenderer(record.get('SuccessorsPlanEstimateColors'), Constants.CLASS.PERCENT_DONE_BY_STORY_PLAN_ESTIMATE);
                 },
-                sortable: false,
+                sortable: true,
                 tdCls: Constants.CLASS.SUCCESSORS + ' ' + Constants.CLASS.PERCENT_DONE_BY_STORY_PLAN_ESTIMATE
             }
         ];

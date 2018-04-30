@@ -7,13 +7,13 @@
             0.0.1
     </title>
     <!--  (c) 2017 CA Technologies.  All Rights Reserved. -->
-    <!--  Build Date: Mon Apr 30 2018 21:16:22 GMT+0000 (UTC) -->
+    <!--  Build Date: Mon Apr 30 2018 23:05:34 GMT+0000 (UTC) -->
 
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Mon Apr 30 2018 21:16:22 GMT+0000 (UTC)";
+        var APP_BUILD_DATE = "Mon Apr 30 2018 23:05:34 GMT+0000 (UTC)";
         var ARTIFACT = "";
         var BUILDER = "ec2-user";
-        var CHECKSUM = "18316924679";
+        var CHECKSUM = "19319194182";
     </script>
 
     <script type="text/javascript" src="https://us1.rallydev.com/apps/2.1/sdk-debug.js"></script>
@@ -36,7 +36,33 @@ Ext.define('Constants', function(Constants) {
                 STATUS_COLORS: 'status-colors',
                 PERCENT_DONE_BY_STORY_COUNT: 'percent-done-by-story-count',
                 PERCENT_DONE_BY_STORY_PLAN_ESTIMATE: 'percent-done-by-story-plan-estimate'
-            }
+            },
+            STATUS_LABEL_ORDER: [{
+                    label: 'Late',
+                    hex: '#F66349',
+                    count: 0
+                },
+                {
+                    label: 'At Risk',
+                    hex: '#FAD200',
+                    count: 0
+                },
+                {
+                    label: 'Not Started',
+                    hex: '#E0E0E0',
+                    count: 0
+                },
+                {
+                    label: 'On Track',
+                    hex: '#8DC63F',
+                    count: 0
+                },
+                {
+                    label: 'Complete',
+                    hex: '#D1D1D1',
+                    count: 0
+                }
+            ]
         }
     }
 });
@@ -443,37 +469,29 @@ Ext.override(Rally.ui.grid.TreeGrid, {
     });
 })();
 
-/* global Ext _ Rally */
+/* global Ext _ Constants */
+(function() {
+    Ext.define('Legend', {
+        alias: 'widget.tslegend',
+        extend: 'Ext.Component',
+
+        constructor: function(config) {
+            var colors = _.map(Constants.STATUS_LABEL_ORDER, function(color) {
+                var colorClass = color.label.toLowerCase().replace(" ", "-");
+                return '<div class="status-color ' + colorClass + '">' + color.label + '</div>';
+            });
+            var template = '<div class="legend status-colors">' + colors.join('') + '</div>'
+            this.renderTpl = new Ext.Template(template);
+            this.callParent([this.config]);
+        }
+    });
+})();
+
+/* global Ext _ Rally Constants */
 Ext.define('MetricsManager', function(MetricsManager) {
     return {
         statics: {
-            addMetrics: addMetrics,
-            STATUS_LABEL_ORDER: [{
-                    label: 'Late',
-                    hex: '#F66349',
-                    count: 0
-                },
-                {
-                    label: 'At Risk',
-                    hex: '#FAD200',
-                    count: 0
-                },
-                {
-                    label: 'Not Started',
-                    hex: '#E0E0E0',
-                    count: 0
-                },
-                {
-                    label: 'On Track',
-                    hex: '#8DC63F',
-                    count: 0
-                },
-                {
-                    label: 'Complete',
-                    hex: '#D1D1D1',
-                    count: 0
-                }
-            ]
+            addMetrics: addMetrics
         }
     }
 
@@ -560,7 +578,7 @@ Ext.define('MetricsManager', function(MetricsManager) {
 
     function splitColors(record, colors, relation, metric) {
         var sortedColors = [];
-        _.forEach(MetricsManager.STATUS_LABEL_ORDER, function(statusLabel) {
+        _.forEach(Constants.STATUS_LABEL_ORDER, function(statusLabel) {
             sortedColors.push(colors[statusLabel.label] ? colors[statusLabel.label] : statusLabel);
         });
         record.set(relation + metric + 'Colors', sortedColors);
@@ -577,6 +595,9 @@ Ext.define("CArABU.app.TSApp", {
         type: 'vbox',
         align: 'stretch'
     },
+    items: [{
+        xtype: 'tslegend'
+    }],
     integrationHeaders: {
         name: "CArABU.app.TSApp"
     },
@@ -707,7 +728,7 @@ Ext.define("CArABU.app.TSApp", {
                 renderer: function(value, meta, record, row, col, store) {
                     return this.colorsRenderer(record.get('PredecessorsStoryCountColors'), Constants.CLASS.PERCENT_DONE_BY_STORY_COUNT);
                 },
-                sortable: false,
+                sortable: true,
                 tdCls: Constants.CLASS.PREDECESSORS + ' ' + Constants.CLASS.PERCENT_DONE_BY_STORY_COUNT
             },
             {
@@ -718,7 +739,7 @@ Ext.define("CArABU.app.TSApp", {
                 renderer: function(value, meta, record, row, col, store) {
                     return this.colorsRenderer(record.get('PredecessorsPlanEstimateColors'), Constants.CLASS.PERCENT_DONE_BY_STORY_PLAN_ESTIMATE);
                 },
-                sortable: false,
+                sortable: true,
                 tdCls: Constants.CLASS.PREDECESSORS + ' ' + Constants.CLASS.PERCENT_DONE_BY_STORY_PLAN_ESTIMATE
             },
             {
@@ -729,7 +750,7 @@ Ext.define("CArABU.app.TSApp", {
                 renderer: function(value, meta, record, row, col, store) {
                     return this.colorsRenderer(record.get('SuccessorsStoryCountColors'), Constants.CLASS.PERCENT_DONE_BY_STORY_COUNT);
                 },
-                sortable: false,
+                sortable: true,
                 tdCls: Constants.CLASS.SUCCESSORS + ' ' + Constants.CLASS.PERCENT_DONE_BY_STORY_COUNT
             },
             {
@@ -740,7 +761,7 @@ Ext.define("CArABU.app.TSApp", {
                 renderer: function(value, meta, record, row, col, store) {
                     return this.colorsRenderer(record.get('SuccessorsPlanEstimateColors'), Constants.CLASS.PERCENT_DONE_BY_STORY_PLAN_ESTIMATE);
                 },
-                sortable: false,
+                sortable: true,
                 tdCls: Constants.CLASS.SUCCESSORS + ' ' + Constants.CLASS.PERCENT_DONE_BY_STORY_PLAN_ESTIMATE
             }
         ];
@@ -787,6 +808,10 @@ Ext.define("CArABU.app.TSApp", {
     margin-top: 25px;
     margin-right: 5px;
     cursor: pointer;
+}
+
+.legend {
+    float: right;
 }
 
 .status-colors {

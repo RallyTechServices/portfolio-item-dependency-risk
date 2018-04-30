@@ -9,7 +9,33 @@ Ext.define('Constants', function(Constants) {
                 STATUS_COLORS: 'status-colors',
                 PERCENT_DONE_BY_STORY_COUNT: 'percent-done-by-story-count',
                 PERCENT_DONE_BY_STORY_PLAN_ESTIMATE: 'percent-done-by-story-plan-estimate'
-            }
+            },
+            STATUS_LABEL_ORDER: [{
+                    label: 'Late',
+                    hex: '#F66349',
+                    count: 0
+                },
+                {
+                    label: 'At Risk',
+                    hex: '#FAD200',
+                    count: 0
+                },
+                {
+                    label: 'Not Started',
+                    hex: '#E0E0E0',
+                    count: 0
+                },
+                {
+                    label: 'On Track',
+                    hex: '#8DC63F',
+                    count: 0
+                },
+                {
+                    label: 'Complete',
+                    hex: '#D1D1D1',
+                    count: 0
+                }
+            ]
         }
     }
 });
