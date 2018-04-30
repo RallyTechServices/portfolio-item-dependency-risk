@@ -1,4 +1,4 @@
-/* global Ext MetricsManager Constants Rally */
+/* global Ext MetricsManager Constants Rally _ */
 Ext.define("CArABU.app.TSApp", {
     extend: 'Rally.app.App',
     componentCls: 'app',
@@ -60,18 +60,24 @@ Ext.define("CArABU.app.TSApp", {
                     ],
                     gridConfig: {
                         store: store,
-                        enabledEditing: false,
-                        shouldShowRowActionsColumn: false,
+                        enabledEditing: true,
+                        shouldShowRowActionsColumn: true,
                         enableRanking: false,
                         enableBulkEdit: false,
+                        alwaysShowDefaultColumns: false, // Otherwise you get 2 copies of the `derived` columns
+                        stateful: true,
+                        stateId: context.getScopedStateId('grid-state'),
                         listeners: {
                             scope: this,
-                            itemclick: function(grid, record, item, index) {
-                                var popover = Rally.ui.popover.PopoverFactory.bake({
-                                    field: 'PredecessorsAndSuccessors',
-                                    record: record,
-                                    target: item
-                                });
+                            cellclick: function(grid, td, cellIndex, record, tr, rowIndex, event) {
+                                // If this is a status color cell, show the dependencies popover
+                                if (Ext.query('.' + Constants.CLASS.STATUS_COLORS, td).length > 0) {
+                                    var popover = Rally.ui.popover.PopoverFactory.bake({
+                                        field: 'PredecessorsAndSuccessors',
+                                        record: record,
+                                        target: td
+                                    });
+                                }
                             }
                         },
                         columnCfgs: this.getColumns(),
@@ -91,42 +97,56 @@ Ext.define("CArABU.app.TSApp", {
             'Name',
         ].concat(this.getDerivedColumns());
     },
-
     getDerivedColumns: function() {
         return [{
-                xtype: 'templatecolumn',
-                text: 'Predecessors',
-                tpl: '{PredecessorCount}'
-            },
-            {
-                xtype: 'templatecolumn',
-                text: 'Successors',
-                tpl: '{SuccessorCount}'
-            },
-            {
-                xtype: 'templatecolumn',
-                //dataIndex: 'PredecessorsStoryCountColorSortKey',
+                dataIndex: 'PredecessorsStoryCountColorSortKey',
                 text: 'Predecessors By Story Count',
-                tpl: '<span><tpl for="PredecessorsStoryCountColors"><span class="{[ values.label.toLowerCase().replace(" ","-") ]}">{count}</span></tpl></span>',
+                width: 100,
+                //tpl: '<span><tpl for="PredecessorsStoryCountColors"><span class="{[ values.label.toLowerCase().replace(" ","-") ]}">{count}</span></tpl></span>',
+                scope: this,
+                renderer: function(value, meta, record, row, col, store) {
+                    return this.colorsRenderer(record.get('PredecessorsStoryCountColors'));
+                }
             },
             {
-                xtype: 'templatecolumn',
-                //dataIndex: 'PredecessorsPlanEstimateColorSortKey',
+                dataIndex: 'PredecessorsPlanEstimateColorSortKey',
                 text: 'Predecessors By Plan Estimate',
-                tpl: '<span><tpl for="PredecessorsPlanEstimateColors"><span class="{[ values.label.toLowerCase().replace(" ","-") ]}">{count}</span></tpl></span>',
+                scope: this,
+                width: 100,
+                renderer: function(value, meta, record, row, col, store) {
+                    return this.colorsRenderer(record.get('PredecessorsPlanEstimateColors'));
+                }
             },
             {
-                xtype: 'templatecolumn',
-                //dataIndex: 'SuccessorsStoryCountColorSortKey',
+                dataIndex: 'SuccessorsStoryCountColorSortKey',
                 text: 'Successors By Story Count',
-                tpl: '<span><tpl for="SuccessorsStoryCountColors"><span class="{[ values.label.toLowerCase().replace(" ","-") ]}">{count}</span></tpl></span>',
+                scope: this,
+                width: 100,
+                renderer: function(value, meta, record, row, col, store) {
+                    return this.colorsRenderer(record.get('SuccessorsStoryCountColors'));
+                }
             },
             {
-                xtype: 'templatecolumn',
-                //dataIndex: 'SuccessorsPlanEstimateColorSortKey',
+                dataIndex: 'SuccessorsPlanEstimateColorSortKey',
                 text: 'Successors By Plan Estimate',
-                tpl: '<span><tpl for="SuccessorsPlanEstimateColors"><span class="{[ values.label.toLowerCase().replace(" ","-") ]}">{count}</span></tpl></span>',
+                scope: this,
+                width: 100,
+                renderer: function(value, meta, record, row, col, store) {
+                    return this.colorsRenderer(record.get('SuccessorsPlanEstimateColors'));
+                }
             }
         ];
+    },
+    colorsRenderer: function(sortedColors) {
+        //return '<span><tpl for="SuccessorsPlanEstimateColors"><span class="{[ values.label.toLowerCase().replace(" ","-") ]}">{count}</span></tpl></span>';
+        var nonZeroColors = _.filter(sortedColors,
+            function(color) {
+                return color.count > 0;
+            });
+        var result = _.map(nonZeroColors, function(color) {
+            var colorClass = color.label.toLowerCase().replace(" ", "-");
+            return '<div class="' + Constants.CLASS.STATUS_COLOR_PREFIX + ' ' + colorClass + '">' + color.count + '</div>'
+        });
+        return '<div class="' + Constants.CLASS.STATUS_COLORS + '">' + result.join('') + '</div>'
     }
 });

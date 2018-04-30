@@ -7,13 +7,13 @@
             0.0.1
     </title>
     <!--  (c) 2017 CA Technologies.  All Rights Reserved. -->
-    <!--  Build Date: Thu Apr 26 2018 17:21:59 GMT+0000 (UTC) -->
+    <!--  Build Date: Mon Apr 30 2018 15:46:11 GMT+0000 (UTC) -->
 
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Thu Apr 26 2018 17:21:59 GMT+0000 (UTC)";
+        var APP_BUILD_DATE = "Mon Apr 30 2018 15:46:11 GMT+0000 (UTC)";
         var ARTIFACT = "";
         var BUILDER = "ec2-user";
-        var CHECKSUM = "4645418267";
+        var CHECKSUM = "6313759613";
     </script>
 
     <script type="text/javascript" src="https://us1.rallydev.com/apps/2.1/sdk-debug.js"></script>
@@ -27,16 +27,47 @@
              
 /* global Ext */
 Ext.define('Constants', function(Constants) {
-   return {
-       statics: {
-           PORTFOLIO_ITEM_FETCH_FIELDS: ['Predecessors', 'Successors']
-       }
-   } 
+    return {
+        statics: {
+            PORTFOLIO_ITEM_FETCH_FIELDS: ['Predecessors', 'Successors'],
+            CLASS: {
+                STATUS_COLOR_PREFIX: 'status-color',
+                STATUS_COLORS: 'status-colors'
+            }
+        }
+    }
 });
+
 /* global Ext Rally _ */
+
+/*
+    Without these overrides columns are Stripped by Rally.ui.grid.GridColumnCfgTransformer if dataIndex of column is not in the model
+    model comes from the store model (see _buildColumns). The tree store builder creates a composite
+    model for portfolio items that include all possible child types (stories, tasks, defects, etc),
+    however _decorateModels override doesn't decorate the composite model, only the sub-model.
+    Alternatively, GridColumnCfgTransformer.transform should check models.getArtifactComponentModels when
+    determining invalid fields. Need to check the tree store sort to see which model it sorts (the composite,
+    or each individual...)
+    
+    Sort is based on column.getSortParam() which calls store.sort(). Store.model is the composite `Artifact`
+    model.
+    
+    Options:
+    * doSort includes a `fn` in the config to store.sort() to allow a per-column sort function, or pass a
+    function instead of a config (see decodeSorters)
+    * consider model.field.sortType
+    * listen to 'beforesort'
+    * get the extra fields into the composite model
+    
+    _removeSortableFromUnsortableColumns (my new column.sortable=undefined), is true by end of _augmentColumnConfigs
+*/
+
 Ext.override(Rally.data.wsapi.TreeStore, {
     _decorateModels: function() {
         var models = this.model;
+
+        // Must add it to composite model otherwise any column with a dataIndex will be excluded
+        this.addExtraFields(models);
 
         if (_.isFunction(models.getArtifactComponentModels)) {
             models = models.getArtifactComponentModels();
@@ -46,23 +77,17 @@ Ext.override(Rally.data.wsapi.TreeStore, {
             if (m.typePath.indexOf("portfolioitem/") != -1) {
                 //m.addField({ name: 'ToDo', type: 'auto', defaultValue: 0, modelType: m.typePath });
                 // TODO (tj) modelType used anywhere?
-                m.addField({ name: 'PredecessorsStoryCountColorSortKey', type: 'string', defaultValue: '', modelType: m.typePath });
-                m.addField({ name: 'PredecessorsPlanEstimateColorSortKey', type: 'string', defaultValue: '', modelType: m.typePath });
-                m.addField({ name: 'SuccessorsStoryCountColorSortKey', type: 'string', defaultValue: '', modelType: m.typePath });
-                m.addField({ name: 'SuccessorsPlanEstimateColorSortKey', type: 'string', defaultValue: '', modelType: m.typePath });
+                this.addExtraFields(m)
             }
-            /*
-            if (m.typePath.indexOf("hierarchicalrequirement") != -1) {
-                m.addField({ name: 'Estimate', type: 'auto', defaultValue: 0, modelType: m.typePath });
-                m.addField({ name: 'TimeSpent', type: 'auto', defaultValue: 0, modelType: m.typePath });
-                m.addField({ name: 'ToDo', type: 'auto', defaultValue: 0, modelType: m.typePath });
-                m.addField({ name: 'AcceptedLeafStoryPlanEstimateTotal', type: 'auto', defaultValue: 0, modelType: m.typePath });
-                m.addField({ name: 'LeafStoryPlanEstimateTotal', type: 'auto', defaultValue: 0, modelType: m.typePath });
-            }
-            */
-        });
-
+        }, this);
         _.each(Ext.Array.from(models), Rally.ui.grid.data.NodeInterface.decorate, Rally.ui.grid.data.NodeInterface);
+    },
+
+    addExtraFields: function(model) {
+        model.addField({ name: 'PredecessorsStoryCountColorSortKey', type: 'string', defaultValue: '', modelType: model.typePath, });
+        model.addField({ name: 'PredecessorsPlanEstimateColorSortKey', type: 'string', defaultValue: '', modelType: model.typePath, });
+        model.addField({ name: 'SuccessorsStoryCountColorSortKey', type: 'string', defaultValue: '', modelType: model.typePath, });
+        model.addField({ name: 'SuccessorsPlanEstimateColorSortKey', type: 'string', defaultValue: '', modelType: model.typePath, });
     }
 });
 
@@ -158,26 +183,28 @@ Ext.define('MetricsManager', function(MetricsManager) {
                         var planEstimateColors = {};
                         _.forEach(predecessors, function(item) {
                             var color;
-                            color = Rally.util.HealthColorCalculator.calculateHealthColorForPortfolioItemData(item, 'PercentDoneByStoryCount');
+                            color = Ext.Object.merge({}, Rally.util.HealthColorCalculator.calculateHealthColorForPortfolioItemData(item.data, 'PercentDoneByStoryCount'));
                             var colorKey = color.label;
                             if (!storyCountColors[color.label]) {
                                 color.count = 1;
-                                storyCountColors[color.label] = color;
+                                // Must use merge because HealthColorCalculator returns status objects
+                                storyCountColors[color.label] = Ext.Object.merge({}, color);
                             }
                             else {
                                 storyCountColors[color.label].count += 1;
                             }
+                            console.log("predecessor status by story: " + color.label);
 
-                            Rally.util.HealthColorCalculator.calculateHealthColorForPortfolioItemData(item, 'PercentDoneByStoryPlanEstimate');
-                            color = Rally.util.HealthColorCalculator.calculateHealthColorForPortfolioItemData(item, 'PercentDoneByStoryCount');
+                            color = Rally.util.HealthColorCalculator.calculateHealthColorForPortfolioItemData(item.data, 'PercentDoneByStoryPlanEstimate');
                             colorKey = color.label;
                             if (!planEstimateColors[color.label]) {
                                 color.count = 1;
-                                planEstimateColors[color.label] = color;
+                                planEstimateColors[color.label] = Ext.Object.merge({}, color);
                             }
                             else {
                                 planEstimateColors[color.label].count += 1;
                             }
+                            console.log("predecessor status by estimate: " + color.label);
                         });
                         splitColors(record, storyCountColors, 'Predecessors', 'StoryCount');
                         splitColors(record, planEstimateColors, 'Predecessors', 'PlanEstimate');
@@ -194,22 +221,21 @@ Ext.define('MetricsManager', function(MetricsManager) {
                         var planEstimateColors = {};
                         _.forEach(successors, function(item) {
                             var color;
-                            color = Rally.util.HealthColorCalculator.calculateHealthColorForPortfolioItemData(item, 'PercentDoneByStoryCount');
+                            color = Rally.util.HealthColorCalculator.calculateHealthColorForPortfolioItemData(item.data, 'PercentDoneByStoryCount');
                             var colorKey = color.label;
                             if (!storyCountColors[colorKey]) {
                                 color.count = 1;
-                                storyCountColors[colorKey] = color;
+                                storyCountColors[colorKey] = Ext.Object.merge({}, color);
                             }
                             else {
                                 storyCountColors[colorKey].count += 1;
                             }
 
-                            Rally.util.HealthColorCalculator.calculateHealthColorForPortfolioItemData(item, 'PercentDoneByStoryPlanEstimate');
-                            color = Rally.util.HealthColorCalculator.calculateHealthColorForPortfolioItemData(item, 'PercentDoneByStoryCount');
+                            color = Rally.util.HealthColorCalculator.calculateHealthColorForPortfolioItemData(item.data, 'PercentDoneByStoryPlanEstimate');
                             colorKey = color.label;
                             if (!planEstimateColors[colorKey]) {
                                 color.count = 1;
-                                planEstimateColors[colorKey] = color
+                                planEstimateColors[colorKey] = Ext.Object.merge({}, color);
                             }
                             else {
                                 planEstimateColors[colorKey].count += 1;
@@ -232,7 +258,7 @@ Ext.define('MetricsManager', function(MetricsManager) {
     }
 });
 
-/* global Ext MetricsManager Constants Rally */
+/* global Ext MetricsManager Constants Rally _ */
 Ext.define("CArABU.app.TSApp", {
     extend: 'Rally.app.App',
     componentCls: 'app',
@@ -294,18 +320,24 @@ Ext.define("CArABU.app.TSApp", {
                     ],
                     gridConfig: {
                         store: store,
-                        enabledEditing: false,
-                        shouldShowRowActionsColumn: false,
+                        enabledEditing: true,
+                        shouldShowRowActionsColumn: true,
                         enableRanking: false,
                         enableBulkEdit: false,
+                        alwaysShowDefaultColumns: false, // Otherwise you get 2 copies of the `derived` columns
+                        stateful: true,
+                        stateId: context.getScopedStateId('grid-state'),
                         listeners: {
                             scope: this,
-                            itemclick: function(grid, record, item, index) {
-                                var popover = Rally.ui.popover.PopoverFactory.bake({
-                                    field: 'PredecessorsAndSuccessors',
-                                    record: record,
-                                    target: item
-                                });
+                            cellclick: function(grid, td, cellIndex, record, tr, rowIndex, event) {
+                                // If this is a status color cell, show the dependencies popover
+                                if (Ext.query('.' + Constants.CLASS.STATUS_COLORS, td).length > 0) {
+                                    var popover = Rally.ui.popover.PopoverFactory.bake({
+                                        field: 'PredecessorsAndSuccessors',
+                                        record: record,
+                                        target: td
+                                    });
+                                }
                             }
                         },
                         columnCfgs: this.getColumns(),
@@ -325,43 +357,57 @@ Ext.define("CArABU.app.TSApp", {
             'Name',
         ].concat(this.getDerivedColumns());
     },
-
     getDerivedColumns: function() {
         return [{
-                xtype: 'templatecolumn',
-                text: 'Predecessors',
-                tpl: '{PredecessorCount}'
-            },
-            {
-                xtype: 'templatecolumn',
-                text: 'Successors',
-                tpl: '{SuccessorCount}'
-            },
-            {
-                xtype: 'templatecolumn',
-                //dataIndex: 'PredecessorsStoryCountColorSortKey',
+                dataIndex: 'PredecessorsStoryCountColorSortKey',
                 text: 'Predecessors By Story Count',
-                tpl: '<span><tpl for="PredecessorsStoryCountColors"><span class="{[ values.label.toLowerCase().replace(" ","-") ]}">{count}</span></tpl></span>',
+                width: 100,
+                //tpl: '<span><tpl for="PredecessorsStoryCountColors"><span class="{[ values.label.toLowerCase().replace(" ","-") ]}">{count}</span></tpl></span>',
+                scope: this,
+                renderer: function(value, meta, record, row, col, store) {
+                    return this.colorsRenderer(record.get('PredecessorsStoryCountColors'));
+                }
             },
             {
-                xtype: 'templatecolumn',
-                //dataIndex: 'PredecessorsPlanEstimateColorSortKey',
+                dataIndex: 'PredecessorsPlanEstimateColorSortKey',
                 text: 'Predecessors By Plan Estimate',
-                tpl: '<span><tpl for="PredecessorsPlanEstimateColors"><span class="{[ values.label.toLowerCase().replace(" ","-") ]}">{count}</span></tpl></span>',
+                scope: this,
+                width: 100,
+                renderer: function(value, meta, record, row, col, store) {
+                    return this.colorsRenderer(record.get('PredecessorsPlanEstimateColors'));
+                }
             },
             {
-                xtype: 'templatecolumn',
-                //dataIndex: 'SuccessorsStoryCountColorSortKey',
+                dataIndex: 'SuccessorsStoryCountColorSortKey',
                 text: 'Successors By Story Count',
-                tpl: '<span><tpl for="SuccessorsStoryCountColors"><span class="{[ values.label.toLowerCase().replace(" ","-") ]}">{count}</span></tpl></span>',
+                scope: this,
+                width: 100,
+                renderer: function(value, meta, record, row, col, store) {
+                    return this.colorsRenderer(record.get('SuccessorsStoryCountColors'));
+                }
             },
             {
-                xtype: 'templatecolumn',
-                //dataIndex: 'SuccessorsPlanEstimateColorSortKey',
+                dataIndex: 'SuccessorsPlanEstimateColorSortKey',
                 text: 'Successors By Plan Estimate',
-                tpl: '<span><tpl for="SuccessorsPlanEstimateColors"><span class="{[ values.label.toLowerCase().replace(" ","-") ]}">{count}</span></tpl></span>',
+                scope: this,
+                width: 100,
+                renderer: function(value, meta, record, row, col, store) {
+                    return this.colorsRenderer(record.get('SuccessorsPlanEstimateColors'));
+                }
             }
         ];
+    },
+    colorsRenderer: function(sortedColors) {
+        //return '<span><tpl for="SuccessorsPlanEstimateColors"><span class="{[ values.label.toLowerCase().replace(" ","-") ]}">{count}</span></tpl></span>';
+        var nonZeroColors = _.filter(sortedColors,
+            function(color) {
+                return color.count > 0;
+            });
+        var result = _.map(nonZeroColors, function(color) {
+            var colorClass = color.label.toLowerCase().replace(" ", "-");
+            return '<div class="' + Constants.CLASS.STATUS_COLOR_PREFIX + ' ' + colorClass + '">' + color.count + '</div>'
+        });
+        return '<div class="' + Constants.CLASS.STATUS_COLORS + '">' + result.join('') + '</div>'
     }
 });
 
@@ -390,6 +436,15 @@ Ext.define("CArABU.app.TSApp", {
     margin-top: 25px;
     margin-right: 5px;
     cursor: pointer;
+}
+
+.status-colors {
+    display:inline-flex;
+}
+
+.status-color {
+    padding: 0 5px 0 5px;
+    border-radius: 50px;
 }
 
 .late {

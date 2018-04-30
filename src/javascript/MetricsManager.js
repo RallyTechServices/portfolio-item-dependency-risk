@@ -50,26 +50,28 @@ Ext.define('MetricsManager', function(MetricsManager) {
                         var planEstimateColors = {};
                         _.forEach(predecessors, function(item) {
                             var color;
-                            color = Rally.util.HealthColorCalculator.calculateHealthColorForPortfolioItemData(item, 'PercentDoneByStoryCount');
+                            color = Ext.Object.merge({}, Rally.util.HealthColorCalculator.calculateHealthColorForPortfolioItemData(item.data, 'PercentDoneByStoryCount'));
                             var colorKey = color.label;
                             if (!storyCountColors[color.label]) {
                                 color.count = 1;
-                                storyCountColors[color.label] = color;
+                                // Must use merge because HealthColorCalculator returns status objects
+                                storyCountColors[color.label] = Ext.Object.merge({}, color);
                             }
                             else {
                                 storyCountColors[color.label].count += 1;
                             }
+                            console.log("predecessor status by story: " + color.label);
 
-                            Rally.util.HealthColorCalculator.calculateHealthColorForPortfolioItemData(item, 'PercentDoneByStoryPlanEstimate');
-                            color = Rally.util.HealthColorCalculator.calculateHealthColorForPortfolioItemData(item, 'PercentDoneByStoryCount');
+                            color = Rally.util.HealthColorCalculator.calculateHealthColorForPortfolioItemData(item.data, 'PercentDoneByStoryPlanEstimate');
                             colorKey = color.label;
                             if (!planEstimateColors[color.label]) {
                                 color.count = 1;
-                                planEstimateColors[color.label] = color;
+                                planEstimateColors[color.label] = Ext.Object.merge({}, color);
                             }
                             else {
                                 planEstimateColors[color.label].count += 1;
                             }
+                            console.log("predecessor status by estimate: " + color.label);
                         });
                         splitColors(record, storyCountColors, 'Predecessors', 'StoryCount');
                         splitColors(record, planEstimateColors, 'Predecessors', 'PlanEstimate');
@@ -86,22 +88,21 @@ Ext.define('MetricsManager', function(MetricsManager) {
                         var planEstimateColors = {};
                         _.forEach(successors, function(item) {
                             var color;
-                            color = Rally.util.HealthColorCalculator.calculateHealthColorForPortfolioItemData(item, 'PercentDoneByStoryCount');
+                            color = Rally.util.HealthColorCalculator.calculateHealthColorForPortfolioItemData(item.data, 'PercentDoneByStoryCount');
                             var colorKey = color.label;
                             if (!storyCountColors[colorKey]) {
                                 color.count = 1;
-                                storyCountColors[colorKey] = color;
+                                storyCountColors[colorKey] = Ext.Object.merge({}, color);
                             }
                             else {
                                 storyCountColors[colorKey].count += 1;
                             }
 
-                            Rally.util.HealthColorCalculator.calculateHealthColorForPortfolioItemData(item, 'PercentDoneByStoryPlanEstimate');
-                            color = Rally.util.HealthColorCalculator.calculateHealthColorForPortfolioItemData(item, 'PercentDoneByStoryCount');
+                            color = Rally.util.HealthColorCalculator.calculateHealthColorForPortfolioItemData(item.data, 'PercentDoneByStoryPlanEstimate');
                             colorKey = color.label;
                             if (!planEstimateColors[colorKey]) {
                                 color.count = 1;
-                                planEstimateColors[colorKey] = color
+                                planEstimateColors[colorKey] = Ext.Object.merge({}, color);
                             }
                             else {
                                 planEstimateColors[colorKey].count += 1;
