@@ -7,13 +7,13 @@
             0.0.1
     </title>
     <!--  (c) 2017 CA Technologies.  All Rights Reserved. -->
-    <!--  Build Date: Mon Apr 30 2018 17:08:23 GMT+0000 (UTC) -->
+    <!--  Build Date: Mon Apr 30 2018 19:56:11 GMT+0000 (UTC) -->
 
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Mon Apr 30 2018 17:08:23 GMT+0000 (UTC)";
+        var APP_BUILD_DATE = "Mon Apr 30 2018 19:56:11 GMT+0000 (UTC)";
         var ARTIFACT = "";
         var BUILDER = "ec2-user";
-        var CHECKSUM = "7301100965";
+        var CHECKSUM = "17286791233";
     </script>
 
     <script type="text/javascript" src="https://us1.rallydev.com/apps/2.1/sdk-debug.js"></script>
@@ -32,7 +32,9 @@ Ext.define('Constants', function(Constants) {
             PORTFOLIO_ITEM_FETCH_FIELDS: ['Predecessors', 'Successors'],
             CLASS: {
                 STATUS_COLOR_PREFIX: 'status-color',
-                STATUS_COLORS: 'status-colors'
+                STATUS_COLORS: 'status-colors',
+                PERCENT_DONE_BY_STORY_COUNT: 'percent-done-by-story-count',
+                PERCENT_DONE_BY_STORY_PLAN_ESTIMATE: 'percent-done-by-story-plan-estimate'
             }
         }
     }
@@ -59,7 +61,12 @@ Ext.define('Constants', function(Constants) {
     * listen to 'beforesort'
     * get the extra fields into the composite model
     
+    * Fields must have a sortType OR decodeSorters must add this.sortRoot to the field sorter
+    
     _removeSortableFromUnsortableColumns (my new column.sortable=undefined), is true by end of _augmentColumnConfigs
+    
+    Can't sort on my custom field because it will only sort the visible items, the next page of data isn't loaded,
+    and can't `order` in API because field doesn't exist on server side, unless Limit: Infinity
 */
 
 Ext.override(Rally.data.wsapi.TreeStore, {
@@ -188,6 +195,249 @@ Ext.override(Rally.ui.grid.TreeGrid, {
     },
     */
 });
+
+/* global Ext */
+
+/**
+ * Based on Rally.ui.popover.DependenciesPopover
+ */
+(function() {
+    var Ext = window.Ext4 || window.Ext;
+
+    /**
+     * Create a popover to display a tabbed view of dependencies on a work item.
+     *
+     *     Rally.ui.popover.PopoverFactory.bake({
+     *         field: 'Dependencies'
+     *     });
+     */
+    Ext.define('DependenciesPopover', {
+        alias: 'widget.tsdependenciespopover',
+        extend: 'Rally.ui.popover.Popover',
+        requires: [
+            'Rally.nav.DetailLink'
+        ],
+
+        id: 'dependencies-popover',
+        cls: 'dependenciesPopover',
+
+        width: 400,
+        maxHeight: 380,
+        titleIconCls: 'icon-predecessor',
+        title: 'Dependencies',
+        percentDoneField: 'PercentDoneByStoryCount',
+
+        fetchFields: {
+            hierarchicalrequirement: ['Name', 'FormattedID', 'ScheduleState', 'Iteration', 'Blocked'],
+            portfolioitem: ['Name', 'FormattedID', this.percentDoneField, 'Release', 'State']
+        },
+
+        rowTpl: undefined,
+
+        countTpl: Ext.create('Ext.XTemplate',
+            '<div class="dependency-row">',
+            'Showing {displayed} of {total} {fieldName} of {id}. {[this.getLinkContent(values.record, values.isEdpEnabled)]}',
+            '</div>', {
+                getLinkContent: function(record, isEdpEnabled) {
+                    if (isEdpEnabled) {
+                        return Rally.nav.DetailLink.getLink({
+                            record: record,
+                            subPage: 'dependencies',
+                            text: 'Go to Dependencies.'
+                        });
+                    }
+                    return '';
+                }
+            }
+        ),
+
+        constructor: function(config) {
+            var numPredecessors = config.record.get('PredecessorsAndSuccessors').Predecessors;
+            var numSuccessors = config.record.get('PredecessorsAndSuccessors').Successors;
+
+            config.items = [{
+                xtype: 'tabpanel',
+                activeTab: numPredecessors === 0 && numSuccessors > 0 ? 1 : 0,
+                items: [{
+                        title: 'Predecessors',
+                        html: 'Loading...',
+                        tabConfig: {
+                            width: 160
+                        }
+                    },
+                    {
+                        title: 'Successors',
+                        html: 'Loading...',
+                        tabConfig: {
+                            width: 160
+                        }
+                    }
+                ],
+                listeners: {
+                    afterRender: this._onAfterRender,
+                    tabChange: this._onAfterRender,
+                    scope: this
+                }
+            }];
+
+            this.loaded = {};
+            this.callParent(arguments);
+            //this.initConfig(config);
+            this.rowTpl = this.getRowTemplate();
+        },
+
+        destroy: function() {
+            this._destroyTooltip();
+            this.callParent(arguments);
+        },
+
+        getRowTemplate: function() {
+            var me = this;
+            return Ext.create('Ext.XTemplate',
+                '<div class="dependency-row">',
+                '<div class="identifier">',
+                '{[this.getFormattedIdTemplate(values.data)]} <span class="object-name dependency-title">{[this.trimText(values.data, 40, "")]}</span>',
+                '</div>',
+                '<div class="status">',
+                '<tpl if="this.isUserStory(values)">',
+                '{[this.getScheduleState(values)]}',
+                '</div>',
+                '<span class="field-label">Iteration:</span> <span class="object-name iteration">{[this.trimText(values.data.Iteration, 25, "Unscheduled")]}</span>',
+                '<tpl else>',
+                '<div class="percent-done-wrapper">{[this.getPercentDone(values)]}</div>',
+                '</div>',
+                '<tpl if="this.hasReleaseAttr(values.data)">',
+                '<span class="field-label">Release:</span>  <span class="object-name release">{[this.trimText(values.data.Release, 25, "Unscheduled")]}</span>',
+                '<tpl else>',
+                '<span>&nbsp;</span>',
+                '</tpl>',
+                '</tpl>',
+                '</div>', {
+                    isUserStory: function(record) {
+                        return record.tplType === 'hierarchicalrequirement';
+                    },
+                    getFormattedIdTemplate: function(data) {
+                        return Ext.create('Rally.ui.renderer.template.FormattedIDTemplate', {
+                            showIcon: true,
+                            showHover: false
+                        }).apply(data);
+                    },
+                    getScheduleState: function(record) {
+                        return Ext.create('Rally.ui.renderer.template.ScheduleStateTemplate', {
+                            field: record.getField('ScheduleState')
+                        }).apply(record.data);
+                    },
+                    getPercentDone: function(record) {
+                        if (me.percentDoneField === 'PercentDoneByStoryCount') {
+                            return Ext.create('Rally.ui.renderer.template.progressbar.PercentDoneByStoryCountTemplate', {
+                                field: record.getField('PercentDoneByStoryCount'),
+                                record: record
+                            }).apply(record.data);
+                        }
+                        else if (me.percentDoneField === 'PercentDoneByStoryPlanEstimate') {
+                            return Ext.create('Rally.ui.renderer.template.progressbar.PercentDoneByStoryPlanEstimateTemplate', {
+                                field: record.getField('PercentDoneByStoryPlanEstimate'),
+                                record: record
+                            }).apply(record.data);
+                        }
+                    },
+                    trimText: function(data, max, defaultValue) {
+                        return data && data.Name ? Ext.String.ellipsis(data.Name, max) : defaultValue;
+                    },
+                    hasReleaseAttr: function(data) {
+                        return data.hasOwnProperty('Release');
+                    }
+                }
+            )
+        },
+
+        _onAfterRender: function() {
+            var tabTitle = this._getTabPanel().getActiveTab().title;
+            if (!this.loaded[tabTitle]) {
+                this.loaded[tabTitle] = true;
+                this._loadData(tabTitle);
+            }
+            else if (Rally.BrowserTest) {
+                Rally.BrowserTest.publishComponentReady(this);
+            }
+        },
+
+        _loadData: function(tabTitle) {
+            this.record.getCollection(tabTitle, {
+                fetch: this.fetchFields[this._getType(this.record)],
+                requester: this
+            }).load({
+                callback: this._onDataRetrieved,
+                scope: this
+            });
+        },
+
+        _onDataRetrieved: function(items) {
+            Rally.data.detail.DetailPagePreference.isDetailPageEnabled('userstory', function(isEnabled) {
+                this.isEdpEnabled = isEnabled;
+                this._getTabPanel().getActiveTab().update(this._buildContent(items));
+                this._addTooltip();
+
+                if (Rally.BrowserTest) {
+                    Rally.BrowserTest.publishComponentReady(this);
+                }
+            }, this);
+        },
+
+        _buildContent: function(items) {
+            var html = [],
+                fieldName = this._getTabPanel().getActiveTab().title;
+
+            _.each(items, function(item) {
+                item.tplType = this._getType(items[0]);
+                html.push(this.rowTpl.apply(item));
+            }, this);
+
+            html.push(this.countTpl.apply({
+                total: this.record.get('PredecessorsAndSuccessors')[fieldName],
+                displayed: items.length,
+                fieldName: fieldName.toLowerCase(),
+                id: this.record.get('FormattedID'),
+                isEdpEnabled: this.isEdpEnabled,
+                record: this.record
+            }));
+
+            return '<div class="outer-container">' + html.join("\n") + '</div>';
+        },
+
+        _addTooltip: function() {
+            var label;
+            if (this.percentDoneField === 'PercentDoneByStoryCount') {
+                label = '% Done by Story Count'
+            }
+            else if (this.percentDoneField === 'PercentDoneByStoryPlanEstimate') {
+                label = '% Done by Story Plan Estimate'
+            }
+            this._destroyTooltip();
+            this.tooltip = Ext.create('Rally.ui.tooltip.ToolTip', {
+                target: this.getEl(),
+                html: label,
+                delegate: '.percent-done-wrapper',
+                anchor: 'top',
+                showDelay: 500
+            });
+        },
+
+        _destroyTooltip: function() {
+            if (this.tooltip) {
+                this.tooltip.destroy();
+            }
+        },
+
+        _getTabPanel: function() {
+            return this.items.items[0];
+        },
+
+        _getType: function(record) {
+            return record.get('_ref').replace(/^\//, '').split('/')[0];
+        }
+    });
+})();
 
 /* global Ext _ Rally */
 Ext.define('MetricsManager', function(MetricsManager) {
@@ -331,6 +581,11 @@ Ext.define("CArABU.app.TSApp", {
         var modelNames = ['portfolioitem/feature'];
         var context = this.getContext();
 
+        // Register our version of the dependencies popover with the PopoverFactory
+        Rally.ui.popover.PopoverFactory.popovers['TsDependenciesPopover'] = function(config) {
+            return Ext.create('DependenciesPopover', this._getConfig(config));
+        }
+
         Ext.create('Rally.data.wsapi.TreeStoreBuilder').build({
             models: modelNames,
             autoLoad: false,
@@ -387,11 +642,20 @@ Ext.define("CArABU.app.TSApp", {
                             scope: this,
                             cellclick: function(grid, td, cellIndex, record, tr, rowIndex, event) {
                                 // If this is a status color cell, show the dependencies popover
-                                if (Ext.query('.' + Constants.CLASS.STATUS_COLORS, td).length > 0) {
+                                if (Ext.query('.' + Constants.CLASS.PERCENT_DONE_BY_STORY_COUNT, td).length > 0) {
                                     var popover = Rally.ui.popover.PopoverFactory.bake({
-                                        field: 'PredecessorsAndSuccessors',
+                                        field: 'TsDependenciesPopover',
                                         record: record,
-                                        target: td
+                                        target: td,
+                                        percentDoneField: 'PercentDoneByStoryCount'
+                                    });
+                                }
+                                else if (Ext.query('.' + Constants.CLASS.PERCENT_DONE_BY_STORY_PLAN_ESTIMATE, td).length > 0) {
+                                    var popover = Rally.ui.popover.PopoverFactory.bake({
+                                        field: 'TsDependenciesPopover',
+                                        record: record,
+                                        target: td,
+                                        percentDoneField: 'PercentDoneByStoryPlanEstimate'
                                     });
                                 }
                             }
@@ -421,8 +685,9 @@ Ext.define("CArABU.app.TSApp", {
                 //tpl: '<span><tpl for="PredecessorsStoryCountColors"><span class="{[ values.label.toLowerCase().replace(" ","-") ]}">{count}</span></tpl></span>',
                 scope: this,
                 renderer: function(value, meta, record, row, col, store) {
-                    return this.colorsRenderer(record.get('PredecessorsStoryCountColors'));
-                }
+                    return this.colorsRenderer(record.get('PredecessorsStoryCountColors'), Constants.CLASS.PERCENT_DONE_BY_STORY_COUNT);
+                },
+                sortable: false
             },
             {
                 dataIndex: 'PredecessorsPlanEstimateColorSortKey',
@@ -430,8 +695,9 @@ Ext.define("CArABU.app.TSApp", {
                 scope: this,
                 //width: 100,
                 renderer: function(value, meta, record, row, col, store) {
-                    return this.colorsRenderer(record.get('PredecessorsPlanEstimateColors'));
-                }
+                    return this.colorsRenderer(record.get('PredecessorsPlanEstimateColors'), Constants.CLASS.PERCENT_DONE_BY_STORY_PLAN_ESTIMATE);
+                },
+                sortable: false
             },
             {
                 dataIndex: 'SuccessorsStoryCountColorSortKey',
@@ -439,8 +705,9 @@ Ext.define("CArABU.app.TSApp", {
                 scope: this,
                 //width: 100,
                 renderer: function(value, meta, record, row, col, store) {
-                    return this.colorsRenderer(record.get('SuccessorsStoryCountColors'));
-                }
+                    return this.colorsRenderer(record.get('SuccessorsStoryCountColors'), Constants.CLASS.PERCENT_DONE_BY_STORY_COUNT);
+                },
+                sortable: false
             },
             {
                 dataIndex: 'SuccessorsPlanEstimateColorSortKey',
@@ -448,12 +715,17 @@ Ext.define("CArABU.app.TSApp", {
                 scope: this,
                 //width: 100,
                 renderer: function(value, meta, record, row, col, store) {
-                    return this.colorsRenderer(record.get('SuccessorsPlanEstimateColors'));
-                }
+                    return this.colorsRenderer(record.get('SuccessorsPlanEstimateColors'), Constants.CLASS.PERCENT_DONE_BY_STORY_PLAN_ESTIMATE);
+                },
+                sortable: false
             }
         ];
     },
-    colorsRenderer: function(sortedColors) {
+    /**
+     * sortedColors: Array of counts
+     * cls: Extra class to add to the cell
+     */
+    colorsRenderer: function(sortedColors, cls) {
         //return '<span><tpl for="SuccessorsPlanEstimateColors"><span class="{[ values.label.toLowerCase().replace(" ","-") ]}">{count}</span></tpl></span>';
         var nonZeroColors = _.filter(sortedColors,
             function(color) {
@@ -463,7 +735,11 @@ Ext.define("CArABU.app.TSApp", {
             var colorClass = color.label.toLowerCase().replace(" ", "-");
             return '<div class="' + Constants.CLASS.STATUS_COLOR_PREFIX + ' ' + colorClass + '">' + color.count + '</div>'
         });
-        return '<div class="' + Constants.CLASS.STATUS_COLORS + '">' + result.join('') + '</div>'
+        var classes = [Constants.CLASS.STATUS_COLORS];
+        if (cls) {
+            classes.push(cls)
+        }
+        return '<div class="' + classes.join(' ') + '">' + result.join('') + '</div>'
     }
 });
 

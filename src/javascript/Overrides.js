@@ -19,7 +19,12 @@
     * listen to 'beforesort'
     * get the extra fields into the composite model
     
+    * Fields must have a sortType OR decodeSorters must add this.sortRoot to the field sorter
+    
     _removeSortableFromUnsortableColumns (my new column.sortable=undefined), is true by end of _augmentColumnConfigs
+    
+    Can't sort on my custom field because it will only sort the visible items, the next page of data isn't loaded,
+    and can't `order` in API because field doesn't exist on server side, unless Limit: Infinity
 */
 
 Ext.override(Rally.data.wsapi.TreeStore, {

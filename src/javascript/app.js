@@ -15,6 +15,11 @@ Ext.define("CArABU.app.TSApp", {
         var modelNames = ['portfolioitem/feature'];
         var context = this.getContext();
 
+        // Register our version of the dependencies popover with the PopoverFactory
+        Rally.ui.popover.PopoverFactory.popovers['TsDependenciesPopover'] = function(config) {
+            return Ext.create('DependenciesPopover', this._getConfig(config));
+        }
+
         Ext.create('Rally.data.wsapi.TreeStoreBuilder').build({
             models: modelNames,
             autoLoad: false,
@@ -71,11 +76,20 @@ Ext.define("CArABU.app.TSApp", {
                             scope: this,
                             cellclick: function(grid, td, cellIndex, record, tr, rowIndex, event) {
                                 // If this is a status color cell, show the dependencies popover
-                                if (Ext.query('.' + Constants.CLASS.STATUS_COLORS, td).length > 0) {
+                                if (Ext.query('.' + Constants.CLASS.PERCENT_DONE_BY_STORY_COUNT, td).length > 0) {
                                     var popover = Rally.ui.popover.PopoverFactory.bake({
-                                        field: 'PredecessorsAndSuccessors',
+                                        field: 'TsDependenciesPopover',
                                         record: record,
-                                        target: td
+                                        target: td,
+                                        percentDoneField: 'PercentDoneByStoryCount'
+                                    });
+                                }
+                                else if (Ext.query('.' + Constants.CLASS.PERCENT_DONE_BY_STORY_PLAN_ESTIMATE, td).length > 0) {
+                                    var popover = Rally.ui.popover.PopoverFactory.bake({
+                                        field: 'TsDependenciesPopover',
+                                        record: record,
+                                        target: td,
+                                        percentDoneField: 'PercentDoneByStoryPlanEstimate'
                                     });
                                 }
                             }
@@ -105,8 +119,9 @@ Ext.define("CArABU.app.TSApp", {
                 //tpl: '<span><tpl for="PredecessorsStoryCountColors"><span class="{[ values.label.toLowerCase().replace(" ","-") ]}">{count}</span></tpl></span>',
                 scope: this,
                 renderer: function(value, meta, record, row, col, store) {
-                    return this.colorsRenderer(record.get('PredecessorsStoryCountColors'));
-                }
+                    return this.colorsRenderer(record.get('PredecessorsStoryCountColors'), Constants.CLASS.PERCENT_DONE_BY_STORY_COUNT);
+                },
+                sortable: false
             },
             {
                 dataIndex: 'PredecessorsPlanEstimateColorSortKey',
@@ -114,8 +129,9 @@ Ext.define("CArABU.app.TSApp", {
                 scope: this,
                 //width: 100,
                 renderer: function(value, meta, record, row, col, store) {
-                    return this.colorsRenderer(record.get('PredecessorsPlanEstimateColors'));
-                }
+                    return this.colorsRenderer(record.get('PredecessorsPlanEstimateColors'), Constants.CLASS.PERCENT_DONE_BY_STORY_PLAN_ESTIMATE);
+                },
+                sortable: false
             },
             {
                 dataIndex: 'SuccessorsStoryCountColorSortKey',
@@ -123,8 +139,9 @@ Ext.define("CArABU.app.TSApp", {
                 scope: this,
                 //width: 100,
                 renderer: function(value, meta, record, row, col, store) {
-                    return this.colorsRenderer(record.get('SuccessorsStoryCountColors'));
-                }
+                    return this.colorsRenderer(record.get('SuccessorsStoryCountColors'), Constants.CLASS.PERCENT_DONE_BY_STORY_COUNT);
+                },
+                sortable: false
             },
             {
                 dataIndex: 'SuccessorsPlanEstimateColorSortKey',
@@ -132,12 +149,17 @@ Ext.define("CArABU.app.TSApp", {
                 scope: this,
                 //width: 100,
                 renderer: function(value, meta, record, row, col, store) {
-                    return this.colorsRenderer(record.get('SuccessorsPlanEstimateColors'));
-                }
+                    return this.colorsRenderer(record.get('SuccessorsPlanEstimateColors'), Constants.CLASS.PERCENT_DONE_BY_STORY_PLAN_ESTIMATE);
+                },
+                sortable: false
             }
         ];
     },
-    colorsRenderer: function(sortedColors) {
+    /**
+     * sortedColors: Array of counts
+     * cls: Extra class to add to the cell
+     */
+    colorsRenderer: function(sortedColors, cls) {
         //return '<span><tpl for="SuccessorsPlanEstimateColors"><span class="{[ values.label.toLowerCase().replace(" ","-") ]}">{count}</span></tpl></span>';
         var nonZeroColors = _.filter(sortedColors,
             function(color) {
@@ -147,6 +169,10 @@ Ext.define("CArABU.app.TSApp", {
             var colorClass = color.label.toLowerCase().replace(" ", "-");
             return '<div class="' + Constants.CLASS.STATUS_COLOR_PREFIX + ' ' + colorClass + '">' + color.count + '</div>'
         });
-        return '<div class="' + Constants.CLASS.STATUS_COLORS + '">' + result.join('') + '</div>'
+        var classes = [Constants.CLASS.STATUS_COLORS];
+        if (cls) {
+            classes.push(cls)
+        }
+        return '<div class="' + classes.join(' ') + '">' + result.join('') + '</div>'
     }
 });
