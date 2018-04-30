@@ -35,8 +35,6 @@ Ext.override(Rally.data.wsapi.TreeStore, {
 
         Ext.Array.each(models, function(m) {
             if (m.typePath.indexOf("portfolioitem/") != -1) {
-                //m.addField({ name: 'ToDo', type: 'auto', defaultValue: 0, modelType: m.typePath });
-                // TODO (tj) modelType used anywhere?
                 this.addExtraFields(m)
             }
         }, this);
@@ -44,10 +42,42 @@ Ext.override(Rally.data.wsapi.TreeStore, {
     },
 
     addExtraFields: function(model) {
-        model.addField({ name: 'PredecessorsStoryCountColorSortKey', type: 'string', defaultValue: '', modelType: model.typePath, });
-        model.addField({ name: 'PredecessorsPlanEstimateColorSortKey', type: 'string', defaultValue: '', modelType: model.typePath, });
-        model.addField({ name: 'SuccessorsStoryCountColorSortKey', type: 'string', defaultValue: '', modelType: model.typePath, });
-        model.addField({ name: 'SuccessorsPlanEstimateColorSortKey', type: 'string', defaultValue: '', modelType: model.typePath, });
+        model.addField({
+            name: 'PredecessorsStoryCountColorSortKey',
+            type: 'string',
+            defaultValue: '',
+            modelType: model.typePath, // TODO (tj) modelType used anywhere?
+            getUUID: function() { // Must include a getUUID function for state save/restore to work
+                return this.name;
+            }
+        });
+        model.addField({
+            name: 'PredecessorsPlanEstimateColorSortKey',
+            type: 'string',
+            defaultValue: '',
+            modelType: model.typePath,
+            getUUID: function() {
+                return this.name;
+            }
+        });
+        model.addField({
+            name: 'SuccessorsStoryCountColorSortKey',
+            type: 'string',
+            defaultValue: '',
+            modelType: model.typePath,
+            getUUID: function() {
+                return this.name;
+            }
+        });
+        model.addField({
+            name: 'SuccessorsPlanEstimateColorSortKey',
+            type: 'string',
+            defaultValue: '',
+            modelType: model.typePath,
+            getUUID: function() {
+                return this.name;
+            }
+        });
     }
 });
 
@@ -62,7 +92,9 @@ Ext.override(Rally.ui.grid.TreeGrid, {
 
             return newColumn;
         }, this);
-        mergedColumns = mergedColumns.concat(this.config.derivedColumns);
+        if (this.config && this.config.derivedColumns) {
+            mergedColumns = mergedColumns.concat(this.config.derivedColumns);
+        }
         return mergedColumns;
     },
     _restoreColumnOrder: function(columnConfigs) {
@@ -75,6 +107,7 @@ Ext.override(Rally.ui.grid.TreeGrid, {
         return currentColumns.concat(addedColumns);
     },
     _applyStatefulColumns: function(columns) {
+        // TODO (tj) test default columns
         if (this.alwaysShowDefaultColumns) {
             _.each(this.columnCfgs, function(columnCfg) {
                 if (!_.any(columns, { dataIndex: this._getColumnName(columnCfg) })) {
@@ -82,11 +115,36 @@ Ext.override(Rally.ui.grid.TreeGrid, {
                 }
             }, this);
         }
+
         if (this.config && this.config.derivedColumns) {
-            this.columnCfgs = columns.concat(this.config.derivedColumns);
+            // Merge the derived column config with the stateful column if the dataIndex is the same,
+            // Otherwise add the derived columns if they aren't present.
+            //this.columnCfgs = columns.concat(this.config.derivedColumns);
+            _.each(this.config.derivedColumns, function(derivedColumnCfg) {
+                var columnState = _.find(columns, { dataIndex: this._getColumnName(derivedColumnCfg) });
+                if (columnState) {
+                    // merge them (add renderer)
+                    _.merge(columnState, derivedColumnCfg);
+                }
+                else {
+                    // insert the derived column at the end
+                    columns.push(derivedColumnCfg);
+                }
+            }, this);
         }
-        else {
-            this.columnCfgs = columns;
+
+        this.columnCfgs = columns;
+    },
+    /*
+    // derived columns likely don't use Rally.data.wsapi.Field, and don't have getUUID.
+    // This override tests for getUUID function BEFORE calling it
+    _getPersistableColumnConfig: function(column) {
+        var columnConfig = this._getColumnConfigFromColumn(column),
+            field = this._getModelField(columnConfig.dataIndex);
+        if (field && field.getUUID) {
+            columnConfig.dataIndex = field.getUUID();
         }
-    }
+        return columnConfig;
+    },
+    */
 });

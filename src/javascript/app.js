@@ -101,7 +101,7 @@ Ext.define("CArABU.app.TSApp", {
         return [{
                 dataIndex: 'PredecessorsStoryCountColorSortKey',
                 text: 'Predecessors By Story Count',
-                width: 100,
+                //width: 100,
                 //tpl: '<span><tpl for="PredecessorsStoryCountColors"><span class="{[ values.label.toLowerCase().replace(" ","-") ]}">{count}</span></tpl></span>',
                 scope: this,
                 renderer: function(value, meta, record, row, col, store) {
@@ -112,7 +112,7 @@ Ext.define("CArABU.app.TSApp", {
                 dataIndex: 'PredecessorsPlanEstimateColorSortKey',
                 text: 'Predecessors By Plan Estimate',
                 scope: this,
-                width: 100,
+                //width: 100,
                 renderer: function(value, meta, record, row, col, store) {
                     return this.colorsRenderer(record.get('PredecessorsPlanEstimateColors'));
                 }
@@ -121,7 +121,7 @@ Ext.define("CArABU.app.TSApp", {
                 dataIndex: 'SuccessorsStoryCountColorSortKey',
                 text: 'Successors By Story Count',
                 scope: this,
-                width: 100,
+                //width: 100,
                 renderer: function(value, meta, record, row, col, store) {
                     return this.colorsRenderer(record.get('SuccessorsStoryCountColors'));
                 }
@@ -130,7 +130,7 @@ Ext.define("CArABU.app.TSApp", {
                 dataIndex: 'SuccessorsPlanEstimateColorSortKey',
                 text: 'Successors By Plan Estimate',
                 scope: this,
-                width: 100,
+                //width: 100,
                 renderer: function(value, meta, record, row, col, store) {
                     return this.colorsRenderer(record.get('SuccessorsPlanEstimateColors'));
                 }

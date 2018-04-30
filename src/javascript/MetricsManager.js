@@ -60,7 +60,6 @@ Ext.define('MetricsManager', function(MetricsManager) {
                             else {
                                 storyCountColors[color.label].count += 1;
                             }
-                            console.log("predecessor status by story: " + color.label);
 
                             color = Rally.util.HealthColorCalculator.calculateHealthColorForPortfolioItemData(item.data, 'PercentDoneByStoryPlanEstimate');
                             colorKey = color.label;
@@ -71,7 +70,6 @@ Ext.define('MetricsManager', function(MetricsManager) {
                             else {
                                 planEstimateColors[color.label].count += 1;
                             }
-                            console.log("predecessor status by estimate: " + color.label);
                         });
                         splitColors(record, storyCountColors, 'Predecessors', 'StoryCount');
                         splitColors(record, planEstimateColors, 'Predecessors', 'PlanEstimate');
