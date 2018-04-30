@@ -16,6 +16,19 @@
     cursor: pointer;
 }
 
+.legend {
+    float: right;
+}
+
+.status-colors {
+    display:inline-flex;
+}
+
+.status-color {
+    padding: 0 5px 0 5px;
+    border-radius: 50px;
+}
+
 .late {
     background-color: #F66349;
 }
