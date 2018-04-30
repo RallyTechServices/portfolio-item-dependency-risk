@@ -76,20 +76,30 @@ Ext.define("CArABU.app.TSApp", {
                             scope: this,
                             cellclick: function(grid, td, cellIndex, record, tr, rowIndex, event) {
                                 // If this is a status color cell, show the dependencies popover
-                                if (Ext.query('.' + Constants.CLASS.PERCENT_DONE_BY_STORY_COUNT, td).length > 0) {
-                                    var popover = Rally.ui.popover.PopoverFactory.bake({
+                                // TODO (tj) not a big fan of using CSS classes to determine column, but didn't
+                                // see another way to get column from cellclick event?
+                                if (Ext.query('.' + Constants.CLASS.STATUS_COLORS, td).length > 0) {
+                                    var activeTab;
+                                    var percentDoneField;
+                                    if (this.elHasClass(td, Constants.CLASS.PREDECESSORS)) {
+                                        activeTab = 0;
+                                    }
+                                    else if (this.elHasClass(td, Constants.CLASS.SUCCESSORS)) {
+                                        activeTab = 1;
+                                    }
+
+                                    if (this.elHasClass(td, Constants.CLASS.PERCENT_DONE_BY_STORY_COUNT)) {
+                                        percentDoneField = 'PercentDoneByStoryCount';
+                                    }
+                                    else if (this.elHasClass(td, Constants.CLASS.PERCENT_DONE_BY_STORY_PLAN_ESTIMATE)) {
+                                        percentDoneField = 'PercentDoneByStoryPlanEstimate'
+                                    }
+                                    Rally.ui.popover.PopoverFactory.bake({
                                         field: 'TsDependenciesPopover',
                                         record: record,
                                         target: td,
-                                        percentDoneField: 'PercentDoneByStoryCount'
-                                    });
-                                }
-                                else if (Ext.query('.' + Constants.CLASS.PERCENT_DONE_BY_STORY_PLAN_ESTIMATE, td).length > 0) {
-                                    var popover = Rally.ui.popover.PopoverFactory.bake({
-                                        field: 'TsDependenciesPopover',
-                                        record: record,
-                                        target: td,
-                                        percentDoneField: 'PercentDoneByStoryPlanEstimate'
+                                        percentDoneField: percentDoneField,
+                                        activeTab: activeTab
                                     });
                                 }
                             }
@@ -102,6 +112,12 @@ Ext.define("CArABU.app.TSApp", {
             },
             scope: this
         });
+    },
+
+    elHasClass(element, cls) {
+        return _.find(element.classList, function(c) {
+            return c === cls
+        })
     },
 
     getColumns: function() {
@@ -121,7 +137,8 @@ Ext.define("CArABU.app.TSApp", {
                 renderer: function(value, meta, record, row, col, store) {
                     return this.colorsRenderer(record.get('PredecessorsStoryCountColors'), Constants.CLASS.PERCENT_DONE_BY_STORY_COUNT);
                 },
-                sortable: false
+                sortable: false,
+                tdCls: Constants.CLASS.PREDECESSORS + ' ' + Constants.CLASS.PERCENT_DONE_BY_STORY_COUNT
             },
             {
                 dataIndex: 'PredecessorsPlanEstimateColorSortKey',
@@ -131,7 +148,8 @@ Ext.define("CArABU.app.TSApp", {
                 renderer: function(value, meta, record, row, col, store) {
                     return this.colorsRenderer(record.get('PredecessorsPlanEstimateColors'), Constants.CLASS.PERCENT_DONE_BY_STORY_PLAN_ESTIMATE);
                 },
-                sortable: false
+                sortable: false,
+                tdCls: Constants.CLASS.PREDECESSORS + ' ' + Constants.CLASS.PERCENT_DONE_BY_STORY_PLAN_ESTIMATE
             },
             {
                 dataIndex: 'SuccessorsStoryCountColorSortKey',
@@ -141,7 +159,8 @@ Ext.define("CArABU.app.TSApp", {
                 renderer: function(value, meta, record, row, col, store) {
                     return this.colorsRenderer(record.get('SuccessorsStoryCountColors'), Constants.CLASS.PERCENT_DONE_BY_STORY_COUNT);
                 },
-                sortable: false
+                sortable: false,
+                tdCls: Constants.CLASS.SUCCESSORS + ' ' + Constants.CLASS.PERCENT_DONE_BY_STORY_COUNT
             },
             {
                 dataIndex: 'SuccessorsPlanEstimateColorSortKey',
@@ -151,7 +170,8 @@ Ext.define("CArABU.app.TSApp", {
                 renderer: function(value, meta, record, row, col, store) {
                     return this.colorsRenderer(record.get('SuccessorsPlanEstimateColors'), Constants.CLASS.PERCENT_DONE_BY_STORY_PLAN_ESTIMATE);
                 },
-                sortable: false
+                sortable: false,
+                tdCls: Constants.CLASS.SUCCESSORS + ' ' + Constants.CLASS.PERCENT_DONE_BY_STORY_PLAN_ESTIMATE
             }
         ];
     },
@@ -160,19 +180,14 @@ Ext.define("CArABU.app.TSApp", {
      * cls: Extra class to add to the cell
      */
     colorsRenderer: function(sortedColors, cls) {
-        //return '<span><tpl for="SuccessorsPlanEstimateColors"><span class="{[ values.label.toLowerCase().replace(" ","-") ]}">{count}</span></tpl></span>';
         var nonZeroColors = _.filter(sortedColors,
             function(color) {
                 return color.count > 0;
             });
         var result = _.map(nonZeroColors, function(color) {
             var colorClass = color.label.toLowerCase().replace(" ", "-");
-            return '<div class="' + Constants.CLASS.STATUS_COLOR_PREFIX + ' ' + colorClass + '">' + color.count + '</div>'
+            return '<div class="status-color ' + colorClass + '">' + color.count + '</div>'
         });
-        var classes = [Constants.CLASS.STATUS_COLORS];
-        if (cls) {
-            classes.push(cls)
-        }
-        return '<div class="' + classes.join(' ') + '">' + result.join('') + '</div>'
+        return '<div class="status-colors">' + result.join('') + '</div>'
     }
 });

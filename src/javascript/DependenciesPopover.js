@@ -31,7 +31,7 @@
 
         fetchFields: {
             hierarchicalrequirement: ['Name', 'FormattedID', 'ScheduleState', 'Iteration', 'Blocked'],
-            portfolioitem: ['Name', 'FormattedID', this.percentDoneField, 'Release', 'State']
+            portfolioitem: ['Name', 'FormattedID', 'Release', 'State', 'PercentDoneByStoryCount', 'PercentDoneByStoryPlanEstimate']
         },
 
         rowTpl: undefined,
@@ -56,10 +56,14 @@
         constructor: function(config) {
             var numPredecessors = config.record.get('PredecessorsAndSuccessors').Predecessors;
             var numSuccessors = config.record.get('PredecessorsAndSuccessors').Successors;
-
+            // 0 for Precessors tab, 1 for Successors tab
+            var activeTab = numPredecessors === 0 && numSuccessors > 0 ? 1 : 0;
+            if (!_.isUndefined(config.activeTab)) {
+                activeTab = config.activeTab;
+            }
             config.items = [{
                 xtype: 'tabpanel',
-                activeTab: numPredecessors === 0 && numSuccessors > 0 ? 1 : 0,
+                activeTab: activeTab,
                 items: [{
                         title: 'Predecessors',
                         html: 'Loading...',
@@ -84,7 +88,6 @@
 
             this.loaded = {};
             this.callParent(arguments);
-            //this.initConfig(config);
             this.rowTpl = this.getRowTemplate();
         },
 

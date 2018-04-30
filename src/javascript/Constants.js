@@ -4,7 +4,8 @@ Ext.define('Constants', function(Constants) {
         statics: {
             PORTFOLIO_ITEM_FETCH_FIELDS: ['Predecessors', 'Successors'],
             CLASS: {
-                STATUS_COLOR_PREFIX: 'status-color',
+                PREDECESSORS: 'predecessors',
+                SUCCESSORS: 'successors',
                 STATUS_COLORS: 'status-colors',
                 PERCENT_DONE_BY_STORY_COUNT: 'percent-done-by-story-count',
                 PERCENT_DONE_BY_STORY_PLAN_ESTIMATE: 'percent-done-by-story-plan-estimate'
