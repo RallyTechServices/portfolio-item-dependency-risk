@@ -50,7 +50,7 @@ Ext.override(Rally.data.wsapi.TreeStore, {
         model.addField({
             name: 'PredecessorsStoryCountColorSortKey',
             type: 'string',
-            defaultValue: '',
+            defaultValue: undefined,
             modelType: model.typePath, // TODO (tj) modelType used anywhere?
             getUUID: function() { // Must include a getUUID function for state save/restore to work
                 return this.name;
@@ -59,7 +59,7 @@ Ext.override(Rally.data.wsapi.TreeStore, {
         model.addField({
             name: 'PredecessorsPlanEstimateColorSortKey',
             type: 'string',
-            defaultValue: '',
+            defaultValue: undefined,
             modelType: model.typePath,
             getUUID: function() {
                 return this.name;
@@ -68,7 +68,7 @@ Ext.override(Rally.data.wsapi.TreeStore, {
         model.addField({
             name: 'SuccessorsStoryCountColorSortKey',
             type: 'string',
-            defaultValue: '',
+            defaultValue: undefined,
             modelType: model.typePath,
             getUUID: function() {
                 return this.name;
@@ -77,7 +77,7 @@ Ext.override(Rally.data.wsapi.TreeStore, {
         model.addField({
             name: 'SuccessorsPlanEstimateColorSortKey',
             type: 'string',
-            defaultValue: '',
+            defaultValue: undefined,
             modelType: model.typePath,
             getUUID: function() {
                 return this.name;

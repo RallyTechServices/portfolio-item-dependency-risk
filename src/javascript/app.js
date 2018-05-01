@@ -117,7 +117,7 @@ Ext.define("CArABU.app.TSApp", {
         });
     },
 
-    elHasClass(element, cls) {
+    elHasClass: function(element, cls) {
         return _.find(element.classList, function(c) {
             return c === cls
         })
@@ -183,14 +183,21 @@ Ext.define("CArABU.app.TSApp", {
      * cls: Extra class to add to the cell
      */
     colorsRenderer: function(sortedColors, cls) {
-        var nonZeroColors = _.filter(sortedColors,
-            function(color) {
-                return color.count > 0;
+        var result;
+        if (_.isUndefined(sortedColors)) {
+            result = 'Loading...';
+        }
+        else {
+            var colors = _.map(sortedColors, function(color) {
+                var colorClass = color.label.toLowerCase().replace(" ", "-");
+                var hiddenClass = '';
+                if (color.count == 0) {
+                    hiddenClass = Constants.CLASS.HIDDEN;
+                }
+                return '<div class="status-color ' + colorClass + ' ' + hiddenClass + '">' + color.count + '</div>'
             });
-        var result = _.map(nonZeroColors, function(color) {
-            var colorClass = color.label.toLowerCase().replace(" ", "-");
-            return '<div class="status-color ' + colorClass + '">' + color.count + '</div>'
-        });
-        return '<div class="status-colors">' + result.join('') + '</div>'
+            result = '<div class="status-colors">' + colors.join('') + '</div>'
+        }
+        return result;
     }
 });

@@ -22,6 +22,7 @@
 
 .status-colors {
     display:inline-flex;
+    cursor: pointer;
 }
 
 .status-color {
@@ -47,4 +48,8 @@
 
 .complete {
     background-color: #D1D1D1;
+}
+
+.hidden {
+    visibility: hidden;
 }
