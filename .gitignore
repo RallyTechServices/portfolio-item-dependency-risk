@@ -7,6 +7,7 @@ App-debug.html
 _SpecRunner.html
 /test/logs/
 deploy/app.min.js
+deploy/App.txt
 .project
 .settings
 deploy/ConfluenceApp.txt

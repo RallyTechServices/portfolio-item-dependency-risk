@@ -8,7 +8,8 @@ Ext.define('Constants', function(Constants) {
                 SUCCESSORS: 'successors',
                 STATUS_COLORS: 'status-colors',
                 PERCENT_DONE_BY_STORY_COUNT: 'percent-done-by-story-count',
-                PERCENT_DONE_BY_STORY_PLAN_ESTIMATE: 'percent-done-by-story-plan-estimate'
+                PERCENT_DONE_BY_STORY_PLAN_ESTIMATE: 'percent-done-by-story-plan-estimate',
+                HIDDEN: 'hidden'
             },
             STATUS_LABEL_ORDER: [{
                     label: 'Late',

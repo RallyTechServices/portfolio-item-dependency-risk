@@ -49,6 +49,10 @@ Ext.define('MetricsManager', function(MetricsManager) {
                         splitColors(record, planEstimateColors, 'Predecessors', 'PlanEstimate');
                     });
             }
+            else {
+                splitColors(record, null, 'Predecessors', 'StoryCount');
+                splitColors(record, null, 'Predecessors', 'PlanEstimate');
+            }
 
             if (successorsRef.Count > 0) {
                 record
@@ -84,15 +88,25 @@ Ext.define('MetricsManager', function(MetricsManager) {
                         splitColors(record, planEstimateColors, 'Successors', 'PlanEstimate');
                     });
             }
+            else {
+                splitColors(record, null, 'Successors', 'StoryCount');
+                splitColors(record, null, 'Successors', 'PlanEstimate');
+            }
         });
     }
 
     function splitColors(record, colors, relation, metric) {
-        var sortedColors = [];
-        _.forEach(Constants.STATUS_LABEL_ORDER, function(statusLabel) {
-            sortedColors.push(colors[statusLabel.label] ? colors[statusLabel.label] : statusLabel);
-        });
-        record.set(relation + metric + 'Colors', sortedColors);
-        record.set(relation + metric + 'ColorSortKey', _.pluck(sortedColors, 'count').join('+'));
+        if (colors) {
+            var sortedColors = [];
+            _.forEach(Constants.STATUS_LABEL_ORDER, function(statusLabel) {
+                sortedColors.push(colors[statusLabel.label] ? colors[statusLabel.label] : statusLabel);
+            });
+            record.set(relation + metric + 'Colors', sortedColors);
+            record.set(relation + metric + 'ColorSortKey', _.pluck(sortedColors, 'count').join('+'));
+        }
+        else {
+            record.set(relation + metric + 'Colors', []);
+            record.set(relation + metric + 'ColorSortKey', '');
+        }
     }
 });
