@@ -16,29 +16,15 @@ Ext.define("CArABU.app.TSApp", {
 
     onTimeboxScopeChange: function(newTimeboxScope) {
         this.callParent(arguments);
+        // TODO (tj) Ideally, we would just refresh the grid, but it is not clear to me how
+        // to do that with a rallygridboard and preserve the timebox filter AND any existing
+        // advanced filters from the filter plugin. Instead, if the page level timebox changes, just
+        // relaunch the app.
         var gridboard = this.down('rallygridboard');
         if (gridboard) {
             this.remove(gridboard);
         }
         this.launch();
-        /*
-        var gridboard = this.down('rallygridboard');
-        if (gridboard) {
-            var store = gridboard.getGridOrBoard().getStore();
-            gridboard.gridConfig.storeConfig.filters = [newTimeboxScope.getQueryFilter()];
-            //store.load()
-            gridboard.getGridOrBoard()._resetCurrentPage();
-        }
-        */
-        /*
-        this.board.refresh({
-            storeConfig: {
-                filters: [
-                    newTimeboxScope.getQueryFilter()
-                ]
-            }
-        });
-        */
     },
 
     launch: function() {
@@ -103,6 +89,8 @@ Ext.define("CArABU.app.TSApp", {
                     gridConfig: {
                         store: store,
                         storeConfig: {
+                            // page-level filters must be set in the store config to allow them to merge with
+                            // any changes made in the `rallygridboardinlinefiltercontrol`
                             filters: pageFilters
                         },
                         enabledEditing: true,
