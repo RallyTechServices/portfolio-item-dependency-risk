@@ -8,14 +8,54 @@ Ext.define("CArABU.app.TSApp", {
         align: 'stretch'
     },
     items: [{
-        xtype: 'tslegend'
+        xtype: 'container',
+        layout: 'hbox',
+        items: [{
+            name: Constants.SETTINGS.PORTFOLIO_ITEM_TYPE_NAME,
+            xtype: 'rallyportfolioitemtypecombobox',
+            fieldLabel: "Portfolio Item Type",
+            labelWidth: 100,
+            allowBlank: false,
+            valueField: 'TypePath',
+        }, {
+            xtype: 'container',
+            flex: 1
+        }]
     }],
     integrationHeaders: {
         name: "CArABU.app.TSApp"
     },
+    piTypePath: undefined,
+
+    onTimeboxScopeChange: function(newTimeboxScope) {
+        this.callParent(arguments);
+        // TODO (tj) Ideally, we would just refresh the grid, but it is not clear to me how
+        // to do that with a rallygridboard and preserve the timebox filter AND any existing
+        // advanced filters from the filter plugin. Instead, if the page level timebox changes, just
+        // relaunch the app.
+        this.addGrid();
+    },
 
     launch: function() {
-        var modelNames = ['portfolioitem/feature'];
+        var piTypeControl = this.down('rallyportfolioitemtypecombobox');
+        piTypeControl.on('change', function(cmp, newValue) {
+            this.addGrid(newValue);
+        }, this);
+
+        this.addGrid(piTypeControl.getValue());
+    },
+
+    addGrid: function(piTypePath) {
+        if (!piTypePath) {
+            return;
+        }
+
+        var gridboard = this.down('rallygridboard');
+        if (gridboard) {
+            this.remove(gridboard);
+        }
+
+        var modelNames = [piTypePath];
         var context = this.getContext();
 
         // Register our version of the dependencies popover with the PopoverFactory
@@ -23,10 +63,17 @@ Ext.define("CArABU.app.TSApp", {
             return Ext.create('DependenciesPopover', this._getConfig(config));
         }
 
+        var pageFilters = [];
+        var timeboxScope = this.getContext().getTimeboxScope();
+        if (timeboxScope) {
+            pageFilters.push(timeboxScope.getQueryFilter());
+        }
+
         Ext.create('Rally.data.wsapi.TreeStoreBuilder').build({
             models: modelNames,
             autoLoad: false,
             enableHierarchy: true,
+            filters: pageFilters,
             listeners: {
                 scope: this,
                 load: function(store, node, records) {
@@ -36,6 +83,7 @@ Ext.define("CArABU.app.TSApp", {
             fetch: Constants.PORTFOLIO_ITEM_FETCH_FIELDS
         }).then({
             success: function(store) {
+                var me = this;
                 this.add({
                     xtype: 'rallygridboard',
                     context: this.getContext(),
@@ -64,10 +112,20 @@ Ext.define("CArABU.app.TSApp", {
                             modelNames: modelNames,
                             stateful: true,
                             stateId: context.getScopedStateId('feature-columns')
+                        },
+                        {
+                            ptype: 'tslegendgridboardplugin',
+                            headerPosition: 'right',
+                            showInGridMode: true
                         }
                     ],
                     gridConfig: {
                         store: store,
+                        storeConfig: {
+                            // page-level filters must be set in the store config to allow them to merge with
+                            // any changes made in the `rallygridboardinlinefiltercontrol`
+                            filters: pageFilters
+                        },
                         enabledEditing: true,
                         shouldShowRowActionsColumn: true,
                         enableRanking: false,

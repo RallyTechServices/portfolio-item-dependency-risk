@@ -17,7 +17,8 @@
 }
 
 .legend {
-    float: right;
+    display: inline-flex;
+    background-color: white;
 }
 
 .status-colors {
