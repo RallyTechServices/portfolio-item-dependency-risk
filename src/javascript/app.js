@@ -257,27 +257,5 @@ Ext.define("CArABU.app.TSApp", {
             result = '<div class="status-colors">' + colors.join('') + '</div>'
         }
         return result;
-    },
-    /*
-    getSettingsFields: function() {
-        return [{
-            name: Constants.SETTINGS.PORTFOLIO_ITEM_TYPE_NAME,
-            xtype: 'rallyportfolioitemtypecombobox',
-            fieldLabel: "Portfolio Item Type Name",
-            //allowNoEntry: true,
-            allowBlank: false,
-            valueField: 'TypePath',
-            labelWidth: 75,
-            labelAlign: 'left',
-            minWidth: 200,
-            margin: 10,
-            listeners: {
-                scope: this,
-                change: function(cmp, newValue, oldValue) {
-                    console.log(newValue);
-                }
-            }
-        }];
-    },
-    */
+    }
 });
