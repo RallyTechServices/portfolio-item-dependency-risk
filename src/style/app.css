@@ -16,10 +16,6 @@
     cursor: pointer;
 }
 
-.legend {
-    float: right;
-}
-
 .status-colors {
     display:inline-flex;
     cursor: pointer;

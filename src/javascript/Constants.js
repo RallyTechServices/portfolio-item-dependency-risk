@@ -36,7 +36,10 @@ Ext.define('Constants', function(Constants) {
                     hex: '#D1D1D1',
                     count: 0
                 }
-            ]
+            ],
+            SETTINGS: {
+                PORTFOLIO_ITEM_TYPE_NAME: 'portfolioItemTypeName'
+            }
         }
     }
 });

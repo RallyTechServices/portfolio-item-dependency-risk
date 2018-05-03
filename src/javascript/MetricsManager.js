@@ -7,8 +7,9 @@ Ext.define('MetricsManager', function(MetricsManager) {
     }
 
     function addMetrics(records) {
+        var requiredTypePath = 'portfolioitem';
         _.forEach(records, function(record) {
-            if (record.get('_type') != 'portfolioitem/feature') {
+            if (record.get('_type').substr(0, requiredTypePath.length) != requiredTypePath) {
                 return
             }
 

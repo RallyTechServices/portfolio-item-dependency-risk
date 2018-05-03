@@ -8,11 +8,28 @@ Ext.define("CArABU.app.TSApp", {
         align: 'stretch'
     },
     items: [{
-        xtype: 'tslegend'
+        xtype: 'container',
+        layout: 'hbox',
+        items: [{
+                name: Constants.SETTINGS.PORTFOLIO_ITEM_TYPE_NAME,
+                xtype: 'rallyportfolioitemtypecombobox',
+                fieldLabel: "Portfolio Item Type",
+                labelWidth: 100,
+                allowBlank: false,
+                valueField: 'TypePath',
+            }, {
+                xtype: 'container',
+                flex: 1
+            },
+            {
+                xtype: 'tslegend'
+            }
+        ]
     }],
     integrationHeaders: {
         name: "CArABU.app.TSApp"
     },
+    piTypePath: undefined,
 
     onTimeboxScopeChange: function(newTimeboxScope) {
         this.callParent(arguments);
@@ -20,15 +37,31 @@ Ext.define("CArABU.app.TSApp", {
         // to do that with a rallygridboard and preserve the timebox filter AND any existing
         // advanced filters from the filter plugin. Instead, if the page level timebox changes, just
         // relaunch the app.
+        this.addGrid();
+    },
+
+    launch: function() {
+        var piTypeControl = this.down('rallyportfolioitemtypecombobox');
+        piTypeControl.on('change', function(cmp, newValue) {
+            this.piTypePath = newValue;
+            this.addGrid();
+        }, this);
+
+        this.piTypePath = piTypeControl.getValue();
+        this.addGrid();
+    },
+
+    addGrid: function() {
+        if (!this.piTypePath) {
+            return;
+        }
+
         var gridboard = this.down('rallygridboard');
         if (gridboard) {
             this.remove(gridboard);
         }
-        this.launch();
-    },
 
-    launch: function() {
-        var modelNames = ['portfolioitem/feature'];
+        var modelNames = [this.piTypePath];
         var context = this.getContext();
 
         // Register our version of the dependencies popover with the PopoverFactory
@@ -224,5 +257,27 @@ Ext.define("CArABU.app.TSApp", {
             result = '<div class="status-colors">' + colors.join('') + '</div>'
         }
         return result;
-    }
+    },
+    /*
+    getSettingsFields: function() {
+        return [{
+            name: Constants.SETTINGS.PORTFOLIO_ITEM_TYPE_NAME,
+            xtype: 'rallyportfolioitemtypecombobox',
+            fieldLabel: "Portfolio Item Type Name",
+            //allowNoEntry: true,
+            allowBlank: false,
+            valueField: 'TypePath',
+            labelWidth: 75,
+            labelAlign: 'left',
+            minWidth: 200,
+            margin: 10,
+            listeners: {
+                scope: this,
+                change: function(cmp, newValue, oldValue) {
+                    console.log(newValue);
+                }
+            }
+        }];
+    },
+    */
 });
