@@ -14,6 +14,33 @@ Ext.define("CArABU.app.TSApp", {
         name: "CArABU.app.TSApp"
     },
 
+    onTimeboxScopeChange: function(newTimeboxScope) {
+        this.callParent(arguments);
+        var gridboard = this.down('rallygridboard');
+        if (gridboard) {
+            this.remove(gridboard);
+        }
+        this.launch();
+        /*
+        var gridboard = this.down('rallygridboard');
+        if (gridboard) {
+            var store = gridboard.getGridOrBoard().getStore();
+            gridboard.gridConfig.storeConfig.filters = [newTimeboxScope.getQueryFilter()];
+            //store.load()
+            gridboard.getGridOrBoard()._resetCurrentPage();
+        }
+        */
+        /*
+        this.board.refresh({
+            storeConfig: {
+                filters: [
+                    newTimeboxScope.getQueryFilter()
+                ]
+            }
+        });
+        */
+    },
+
     launch: function() {
         var modelNames = ['portfolioitem/feature'];
         var context = this.getContext();
@@ -23,10 +50,17 @@ Ext.define("CArABU.app.TSApp", {
             return Ext.create('DependenciesPopover', this._getConfig(config));
         }
 
+        var pageFilters = [];
+        var timeboxScope = this.getContext().getTimeboxScope();
+        if (timeboxScope) {
+            pageFilters.push(timeboxScope.getQueryFilter());
+        }
+
         Ext.create('Rally.data.wsapi.TreeStoreBuilder').build({
             models: modelNames,
             autoLoad: false,
             enableHierarchy: true,
+            filters: pageFilters,
             listeners: {
                 scope: this,
                 load: function(store, node, records) {
@@ -68,6 +102,9 @@ Ext.define("CArABU.app.TSApp", {
                     ],
                     gridConfig: {
                         store: store,
+                        storeConfig: {
+                            filters: pageFilters
+                        },
                         enabledEditing: true,
                         shouldShowRowActionsColumn: true,
                         enableRanking: false,
