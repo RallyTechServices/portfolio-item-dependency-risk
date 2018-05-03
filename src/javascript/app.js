@@ -11,20 +11,16 @@ Ext.define("CArABU.app.TSApp", {
         xtype: 'container',
         layout: 'hbox',
         items: [{
-                name: Constants.SETTINGS.PORTFOLIO_ITEM_TYPE_NAME,
-                xtype: 'rallyportfolioitemtypecombobox',
-                fieldLabel: "Portfolio Item Type",
-                labelWidth: 100,
-                allowBlank: false,
-                valueField: 'TypePath',
-            }, {
-                xtype: 'container',
-                flex: 1
-            },
-            {
-                xtype: 'tslegend'
-            }
-        ]
+            name: Constants.SETTINGS.PORTFOLIO_ITEM_TYPE_NAME,
+            xtype: 'rallyportfolioitemtypecombobox',
+            fieldLabel: "Portfolio Item Type",
+            labelWidth: 100,
+            allowBlank: false,
+            valueField: 'TypePath',
+        }, {
+            xtype: 'container',
+            flex: 1
+        }]
     }],
     integrationHeaders: {
         name: "CArABU.app.TSApp"
@@ -43,16 +39,14 @@ Ext.define("CArABU.app.TSApp", {
     launch: function() {
         var piTypeControl = this.down('rallyportfolioitemtypecombobox');
         piTypeControl.on('change', function(cmp, newValue) {
-            this.piTypePath = newValue;
-            this.addGrid();
+            this.addGrid(newValue);
         }, this);
 
-        this.piTypePath = piTypeControl.getValue();
-        this.addGrid();
+        this.addGrid(piTypeControl.getValue());
     },
 
-    addGrid: function() {
-        if (!this.piTypePath) {
+    addGrid: function(piTypePath) {
+        if (!piTypePath) {
             return;
         }
 
@@ -61,7 +55,7 @@ Ext.define("CArABU.app.TSApp", {
             this.remove(gridboard);
         }
 
-        var modelNames = [this.piTypePath];
+        var modelNames = [piTypePath];
         var context = this.getContext();
 
         // Register our version of the dependencies popover with the PopoverFactory
@@ -89,6 +83,7 @@ Ext.define("CArABU.app.TSApp", {
             fetch: Constants.PORTFOLIO_ITEM_FETCH_FIELDS
         }).then({
             success: function(store) {
+                var me = this;
                 this.add({
                     xtype: 'rallygridboard',
                     context: this.getContext(),
@@ -117,6 +112,11 @@ Ext.define("CArABU.app.TSApp", {
                             modelNames: modelNames,
                             stateful: true,
                             stateId: context.getScopedStateId('feature-columns')
+                        },
+                        {
+                            ptype: 'tslegendgridboardplugin',
+                            headerPosition: 'right',
+                            showInGridMode: true
                         }
                     ],
                     gridConfig: {

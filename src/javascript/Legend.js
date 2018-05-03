@@ -9,7 +9,7 @@
                 var colorClass = color.label.toLowerCase().replace(" ", "-");
                 return '<div class="status-color ' + colorClass + '">' + color.label + '</div>';
             });
-            var template = '<div class="legend status-colors">' + colors.join('') + '</div>'
+            var template = '<div class="legend">' + colors.join('') + '</div>'
             this.renderTpl = new Ext.Template(template);
             this.callParent([this.config]);
         }

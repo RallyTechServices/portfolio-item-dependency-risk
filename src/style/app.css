@@ -16,6 +16,11 @@
     cursor: pointer;
 }
 
+.legend {
+    display: inline-flex;
+    background-color: white;
+}
+
 .status-colors {
     display:inline-flex;
     cursor: pointer;
