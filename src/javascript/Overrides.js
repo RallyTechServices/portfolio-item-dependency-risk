@@ -1,5 +1,13 @@
 /* global Ext Rally _ */
 
+Ext.override(Rally.ui.inlinefilter.PropertyFieldComboBox, {
+    /**
+     * @cfg {String[]} whiteListFields
+     * field names that should be included from the filter row field combobox
+     */
+    defaultWhiteListFields: ['Milestones', 'Tags']
+});
+
 /*
     Without these overrides columns are Stripped by Rally.ui.grid.GridColumnCfgTransformer if dataIndex of column is not in the model
     model comes from the store model (see _buildColumns). The tree store builder creates a composite
@@ -102,6 +110,14 @@ Ext.override(Rally.ui.grid.TreeGrid, {
         }
         return mergedColumns;
     },
+    _getColumnConfigsBasedOnCurrentOrder: function(columnConfigs) {
+        var cols = _(this.headerCt.items.getRange()).map(function(column) {
+            //override:  Added additional search for column.text
+            return _.contains(columnConfigs, column.dataIndex) ? column.dataIndex : _.find(columnConfigs, { xtype: column.xtype, text: column.text });
+        }).compact().value();
+
+        return cols;
+    },
     _restoreColumnOrder: function(columnConfigs) {
 
         var currentColumns = this._getColumnConfigsBasedOnCurrentOrder(columnConfigs);
@@ -152,4 +168,32 @@ Ext.override(Rally.ui.grid.TreeGrid, {
         return columnConfig;
     },
     */
+});
+
+Ext.override(Rally.ui.gridboard.plugin.GridBoardInlineFilterControl, {
+    setCurrentView: function(view) {
+        var inlineFilterButton = this.getControlCmp().getComponent('inlineFilterButton'),
+            stateId = inlineFilterButton.getStateId(),
+            state = _.pick(view, this.sharedViewState);
+        console.log('setCurrentview filter', inlineFilterButton, stateId, state);
+        Ext.apply(state, _.pick(inlineFilterButton.getState(), 'collapsed', 'advancedCollapsed'));
+        Ext.state.Manager.set(stateId, state);
+    }
+});
+
+Ext.override(Rally.ui.gridboard.GridBoard, {
+    setCurrentView: function(view) {
+
+        this._setSharedViewProperties(this.plugins, view);
+
+        if (view.toggleState === 'grid') {
+            Ext.state.Manager.set(this._getGridConfig().stateId, _.pick(view, ['columns', 'sorters']));
+        }
+        else if (view.toggleState === 'board') {
+            Ext.state.Manager.set(this._getBoardConfig().fieldsStateId, view.fields);
+        }
+        Ext.state.Manager.set(this.stateId, _.pick(view, ['toggleState']));
+        this.fireEvent('viewchange', this);
+
+    }
 });
