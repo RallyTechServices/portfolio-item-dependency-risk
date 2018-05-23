@@ -39,13 +39,15 @@ Ext.define("CArABU.app.TSApp", {
     launch: function() {
         var piTypeControl = this.down('rallyportfolioitemtypecombobox');
         piTypeControl.on('change', function(cmp, newValue) {
-            this.addGrid(newValue);
+            this.addGrid();
         }, this);
 
-        this.addGrid(piTypeControl.getValue());
+        this.addGrid();
     },
 
-    addGrid: function(piTypePath) {
+    addGrid: function() {
+        var piTypeControl = this.down('rallyportfolioitemtypecombobox');
+        var piTypePath = piTypeControl.getValue();
         if (!piTypePath) {
             return;
         }
@@ -114,11 +116,23 @@ Ext.define("CArABU.app.TSApp", {
                             stateId: context.getScopedStateId('feature-columns')
                         },
                         {
+                            ptype: 'rallygridboardsharedviewcontrol',
+                            stateful: true,
+                            stateId: context.getScopedStateId('task-view'),
+                            stateEvents: ['select', 'beforedestroy'],
+                            //margin: margin
+                        }, {
                             ptype: 'tslegendgridboardplugin',
                             headerPosition: 'right',
                             showInGridMode: true
                         }
                     ],
+                    listeners: {
+                        scope: this,
+                        viewchange: function(cmp) {
+                            this.addGrid();
+                        }
+                    },
                     gridConfig: {
                         store: store,
                         storeConfig: {

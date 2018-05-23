@@ -10,8 +10,8 @@ are color coded based on the standard Agile Central [https://help.rallydev.com/t
 
 Click on a colored circle to see the list of predecessors and successors.
 
-The list of portfolio items can be configured using column selection and advanced filters. The app will also respect
-page-level timebox filters of `Release` and `Milestone`.
+The list of portfolio items can be configured using column selection and advanced filters (which can be saved in shared views).
+The app will also respect page-level timebox filters of `Release` and `Milestone`.
 
 NOTE: The dependencies columns can be sorted, but ONLY for the current page of results.
 Filter the list of items to fit onto 1 page before relying on the sorting of these columns.
